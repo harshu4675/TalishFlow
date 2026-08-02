@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0F6E7C;
+  --color-primary-hover: #0A5560;
+  --color-accent: #1E8FA0;
+  --color-bg-main: #F8FAFB;
+  --color-card-main: #FFFFFF;
+  --color-bg-secondary: #EEF4F5;
+  --color-text-primary: #17232D;
+  --color-text-secondary: #68737D;
+  --color-border-main: #E5ECEF;
+  --color-success: #22C55E;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+
+  --font-sans: "Manrope", "Inter", sans-serif;
+  --font-manrope: "Manrope", sans-serif;
+}
+
+/* Custom styles for luxury soft UI feel */
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-bg-main);
+    color: var(--color-text-primary);
+  }
+}
+
+/* Premium shadows & soft glass effects */
+.luxury-card {
+  background: #FFFFFF;
+  border: 1px solid #E5ECEF;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(15, 110, 124, 0.03), 0 2px 8px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.luxury-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -4px rgba(15, 110, 124, 0.06), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+}
+
+.soft-shadow {
+  box-shadow: 0 10px 40px -10px rgba(15, 110, 124, 0.08);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Subtitle Preview Animations and Themes */
+.subtitle-word-active {
+  animation: word-pulse 0.25s ease-out;
+}
+
+@keyframes word-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}

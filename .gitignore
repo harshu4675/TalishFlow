@@ -1,0 +1,21 @@
+# Dependency folders
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Local database and dynamic uploads
+backend/data/
+data/
+uploads/
+backend/uploads/
+
+# Build outputs
+frontend/dist/
+backend/dist/
+
+# Local environment and caches
+.env
+.env.local
+.DS_Store
+.npm/
+.eslintcache
