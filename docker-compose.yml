@@ -1,0 +1,77 @@
+version: '3.9'
+
+services:
+  # ── MongoDB ──────────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: talishflow-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: talishflow
+      MONGO_INITDB_ROOT_PASSWORD: talishflow_secure_password
+      MONGO_INITDB_DATABASE: talishflow
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks:
+      - talishflow-network
+
+  # ── Redis ─────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: talishflow-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis_secure_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - talishflow-network
+
+  # ── Server ────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: ../Dockerfile.server
+    container_name: talishflow-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://talishflow:talishflow_secure_password@mongodb:27017/talishflow
+      REDIS_URL: redis://:redis_secure_password@redis:6379
+    volumes:
+      - ./server/uploads:/app/uploads
+      - ./server/logs:/app/logs
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - talishflow-network
+
+  # ── Client (production) ───────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: ../Dockerfile.client
+    container_name: talishflow-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - server
+    networks:
+      - talishflow-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  talishflow-network:
+    driver: bridge
