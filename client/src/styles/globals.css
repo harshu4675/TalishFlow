@@ -137,149 +137,164 @@
   --shadow-popover: 0 8px 24px rgba(20, 24, 33, 0.1), 0 1px 3px rgba(20, 24, 33, 0.06);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/*
+ * Global element defaults.
+ *
+ * IMPORTANT: these MUST live inside `@layer base`. Tailwind v4 emits every
+ * utility class inside `@layer utilities`, and un-layered author CSS always
+ * outranks layered CSS in the cascade. An un-layered `* { margin: 0;
+ * padding: 0 }` reset here previously overrode every padding/margin utility
+ * in the app and collapsed the entire dashboard layout. Tailwind's own preflight
+ * (in `@layer base`) already resets box-sizing, margin and padding, so no
+ * custom universal reset is needed.
+ */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: 'Inter', 'Manrope', system-ui, sans-serif;
+    font-size: clamp(14px, 0.9vw + 0.5rem, 16px);
+    line-height: 1.6;
+    color: var(--tf-foreground);
+    background: var(--tf-canvas);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    letter-spacing: -0.01em;
+  }
+
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--tf-foreground);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--tf-surface-strong);
+    border-radius: 999px;
+    border: 2px solid var(--tf-canvas);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--tf-foreground-faint);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--tf-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--tf-primary-glow);
+    color: var(--tf-foreground);
+  }
 }
 
-html {
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
+/*
+ * Reusable helper classes. Kept in `@layer components` so that utility
+ * classes applied alongside them (e.g. `skeleton rounded-xl`) still win.
+ */
+@layer components {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
 
-body {
-  font-family: 'Inter', 'Manrope', system-ui, sans-serif;
-  font-size: clamp(14px, 0.9vw + 0.5rem, 16px);
-  line-height: 1.6;
-  color: var(--tf-foreground);
-  background: var(--tf-canvas);
-  min-height: 100dvh;
-  overflow-x: hidden;
-  letter-spacing: -0.01em;
-}
+  .skeleton {
+    background: linear-gradient(
+      110deg,
+      var(--tf-surface-strong) 20%,
+      var(--tf-surface-muted) 40%,
+      var(--tf-surface-muted) 60%,
+      var(--tf-surface-strong) 80%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 8px;
+  }
 
-#root {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
+  .gradient-text {
+    background: linear-gradient(
+      135deg,
+      var(--tf-primary) 0%,
+      var(--tf-primary-deep) 60%,
+      var(--tf-accent) 120%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: 'Manrope', 'Inter', system-ui, sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--tf-foreground);
-}
+  .gradient-primary {
+    background: linear-gradient(
+      135deg,
+      var(--tf-primary) 0%,
+      var(--tf-primary-deep) 100%
+    );
+  }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--tf-surface-strong);
-  border-radius: 999px;
-  border: 2px solid var(--tf-canvas);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--tf-foreground-faint);
-}
+  .gradient-accent {
+    background: linear-gradient(135deg, var(--tf-accent) 0%, var(--tf-accent-hover) 100%);
+  }
 
-:focus-visible {
-  outline: 2px solid var(--tf-primary);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+  .gradient-mesh {
+    background:
+      radial-gradient(at 15% 20%, var(--tf-primary-glow) 0px, transparent 50%),
+      radial-gradient(at 85% 80%, var(--tf-accent-light) 0px, transparent 50%),
+      linear-gradient(135deg, var(--tf-canvas) 0%, var(--tf-surface) 100%);
+  }
 
-::selection {
-  background: var(--tf-primary-glow);
-  color: var(--tf-foreground);
-}
+  .glass {
+    background: var(--tf-surface);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--tf-border);
+  }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.skeleton {
-  background: linear-gradient(
-    110deg,
-    var(--tf-surface-strong) 20%,
-    var(--tf-surface-muted) 40%,
-    var(--tf-surface-muted) 60%,
-    var(--tf-surface-strong) 80%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 8px;
-}
-
-.gradient-text {
-  background: linear-gradient(
-    135deg,
-    var(--tf-primary) 0%,
-    var(--tf-primary-deep) 60%,
-    var(--tf-accent) 120%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.gradient-primary {
-  background: linear-gradient(135deg, var(--tf-primary) 0%, var(--tf-primary-deep) 100%);
-}
-
-.gradient-accent {
-  background: linear-gradient(135deg, var(--tf-accent) 0%, var(--tf-accent-hover) 100%);
-}
-
-.gradient-mesh {
-  background:
-    radial-gradient(at 15% 20%, var(--tf-primary-glow) 0px, transparent 50%),
-    radial-gradient(at 85% 80%, var(--tf-accent-light) 0px, transparent 50%),
-    linear-gradient(135deg, var(--tf-canvas) 0%, var(--tf-surface) 100%);
-}
-
-.glass {
-  background: var(--tf-surface);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--tf-border);
-}
-
-.z-toast {
-  z-index: 800;
-}
-.z-modal {
-  z-index: 500;
-}
-.z-modal-backdrop {
-  z-index: 400;
-}
-.z-fixed {
-  z-index: 300;
-}
-.z-sticky {
-  z-index: 200;
-}
-.z-dropdown {
-  z-index: 100;
+  .z-toast {
+    z-index: 800;
+  }
+  .z-modal {
+    z-index: 500;
+  }
+  .z-modal-backdrop {
+    z-index: 400;
+  }
+  .z-fixed {
+    z-index: 300;
+  }
+  .z-sticky {
+    z-index: 200;
+  }
+  .z-dropdown {
+    z-index: 100;
+  }
 }
 
 @keyframes shimmer {
@@ -329,21 +344,23 @@ h6 {
   }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-.animate-fade-in {
-  animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.animate-slide-up {
-  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.animate-scale-in {
-  animation: scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+@layer components {
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-scale-in {
+    animation: scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 
-.text-balance {
-  text-wrap: balance;
+  .text-balance {
+    text-wrap: balance;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

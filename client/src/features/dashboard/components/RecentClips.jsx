@@ -117,7 +117,7 @@ export default function RecentClips() {
 
       <div className="p-4">
         {isLoading ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <ClipCardSkeleton key={i} />
             ))}
@@ -129,7 +129,7 @@ export default function RecentClips() {
             description="Process a video to auto-generate viral clips."
           />
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {clips.map((clip, index) => (
               <ClipCard key={clip._id} clip={clip} index={index} />
             ))}

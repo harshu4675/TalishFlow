@@ -51,9 +51,9 @@ export default function QuickActions() {
             key={item.action}
             type="button"
             onClick={() => handleAction(item.action)}
-            className="group border-border bg-surface shadow-card hover:border-primary/30 hover:shadow-float focus-visible:ring-primary/40 relative flex items-center gap-4 overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none"
+            className="group border-border bg-surface shadow-card hover:border-primary/30 hover:shadow-float focus-visible:ring-primary/40 relative flex items-center gap-3 overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none"
           >
-            <span className="bg-primary-light text-primary flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
+            <span className="bg-primary-light text-primary flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
               <Icon className="h-5 w-5" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
@@ -65,7 +65,7 @@ export default function QuickActions() {
               </span>
             </span>
             <ArrowUpRight
-              className="text-foreground-faint group-hover:text-primary h-4 w-4 flex-shrink-0 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
+              className="text-foreground-faint group-hover:text-primary absolute top-3 right-3 h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
               aria-hidden="true"
             />
           </button>
