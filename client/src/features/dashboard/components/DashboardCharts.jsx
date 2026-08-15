@@ -12,7 +12,8 @@ import {
   Bar,
 } from 'recharts'
 import { BarChart3, Upload } from 'lucide-react'
-import { apiClient } from '@/services/api'
+import { analyticsService } from '@/services/analyticsService'
+import { queryKeys } from '@/utils/queryKeys'
 import { cn } from '@/utils/cn'
 import { formatNumber } from '@/utils/formatters'
 import ChartCard from '@/components/common/ChartCard'
@@ -28,11 +29,6 @@ const CHART_TABS = [
   { key: 'views', label: 'Views' },
   { key: 'clips', label: 'Clips' },
 ]
-
-async function fetchChartData(period) {
-  const response = await apiClient.get(`/analytics/charts?period=${period}`)
-  return response.data.data
-}
 
 function SegmentedControl({ options, value, onChange, ariaLabel }) {
   return (
@@ -89,8 +85,8 @@ export default function DashboardCharts() {
   const [activeChart, setActiveChart] = useState('views')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics', 'charts', period],
-    queryFn: () => fetchChartData(period),
+    queryKey: queryKeys.dashboard.charts(period),
+    queryFn: () => analyticsService.getCharts(period),
     staleTime: 1000 * 60 * 5,
   })
 

@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Move, RotateCcw, Check, Loader2 } from 'lucide-react'
 import timelineService from '@/services/timelineService'
-import { useNotificationContext } from '@/context/NotificationContext'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { cn } from '@/utils/cn'
 import { motion } from 'framer-motion'
 

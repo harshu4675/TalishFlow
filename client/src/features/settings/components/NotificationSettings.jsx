@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Loader2, BellRing } from 'lucide-react'
-import { apiClient } from '@/services/api'
-import { useAuthContext } from '@/context/AuthContext'
-import { useNotificationContext } from '@/context/NotificationContext'
+import { settingsService } from '@/services/settingsService'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import Switch from '@/components/ui/switch'
 
 const NOTIFICATION_OPTIONS = [
@@ -42,12 +42,8 @@ export default function NotificationSettings() {
   )
 
   const saveMutation = useMutation({
-    mutationFn: async (prefs) => {
-      const response = await apiClient.patch('/settings/profile', {
-        preferences: { notifications: prefs },
-      })
-      return response.data.data.user
-    },
+    mutationFn: (prefs) =>
+      settingsService.updateProfile({ preferences: { notifications: prefs } }),
     onSuccess: (updatedUser) => {
       updateUser(updatedUser)
       success('Preferences saved', 'Your notification settings have been updated.')

@@ -2,16 +2,12 @@ import { memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Scissors, Download, ExternalLink, Play } from 'lucide-react'
-import { apiClient } from '@/services/api'
-import { QUERY_KEYS, ROUTES } from '@/utils/constants'
+import { clipService } from '@/services/clipService'
+import { ROUTES } from '@/utils/constants'
+import { queryKeys } from '@/utils/queryKeys'
 import { formatDuration, formatRelativeTime } from '@/utils/formatters'
 import EmptyState from '@/components/common/EmptyState'
 import { motion } from 'framer-motion'
-
-async function fetchRecentClips() {
-  const response = await apiClient.get('/clips?limit=6&sort=-createdAt')
-  return response.data.data
-}
 
 const ClipCard = memo(function ClipCard({ clip, index }) {
   return (
@@ -93,8 +89,8 @@ function ClipCardSkeleton() {
 export default function RecentClips() {
   const navigate = useNavigate()
   const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD.RECENT_CLIPS,
-    queryFn: fetchRecentClips,
+    queryKey: queryKeys.dashboard.recentClips,
+    queryFn: () => clipService.listClips({ limit: 6, sort: '-createdAt' }),
     staleTime: 1000 * 60,
   })
 

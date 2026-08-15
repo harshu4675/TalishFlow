@@ -30,10 +30,11 @@ export default function MetricCard({
   value,
   change,
   context,
-  icon: Icon,
+  icon,
   isLoading = false,
   className,
 }) {
+  const Icon = icon
   if (isLoading) {
     return (
       <div

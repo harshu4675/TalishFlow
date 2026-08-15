@@ -1,15 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
-import { apiClient } from '@/services/api'
+import { processingService } from '@/services/processingService'
+import { queryKeys } from '@/utils/queryKeys'
 import { PROCESSING_STATUS, PROCESSING_STATUS_LABELS } from '@/utils/constants'
 import { formatRelativeTime } from '@/utils/formatters'
 import EmptyState from '@/components/common/EmptyState'
-
-async function fetchQueue() {
-  const response = await apiClient.get('/processing/queue')
-  return response.data.data
-}
 
 function ProgressBar({ progress }) {
   return (
@@ -116,8 +112,8 @@ function QueueSkeleton() {
 
 export default function ProcessingQueue() {
   const { data, isLoading } = useQuery({
-    queryKey: ['processing', 'queue'],
-    queryFn: fetchQueue,
+    queryKey: queryKeys.dashboard.processingQueue,
+    queryFn: processingService.getQueue,
     staleTime: 1000 * 15,
     refetchInterval: 1000 * 10,
   })

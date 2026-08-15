@@ -37,23 +37,28 @@ export default function DashboardPage() {
 
         <AnalyticsCards stats={stats} isLoading={isLoadingStats} />
 
-        <Suspense fallback={<ChartLoader />}>
-          <DashboardCharts />
-        </Suspense>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
+          <div className="min-w-0 lg:col-span-2">
+            <Suspense fallback={<ChartLoader />}>
+              <DashboardCharts />
+            </Suspense>
+          </div>
+          <div className="flex min-w-0 flex-col gap-5">
+            <ProcessingQueue />
+            <StorageUsage />
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
+          <div className="min-w-0 lg:col-span-2">
             <RecentUploads />
           </div>
-          <StorageUsage />
+          <div className="min-w-0">
+            <ScheduledPosts />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <RecentClips />
-          <ScheduledPosts />
-        </div>
-
-        <ProcessingQueue />
+        <RecentClips />
       </div>
     </div>
   )

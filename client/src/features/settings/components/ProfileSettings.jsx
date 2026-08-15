@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Camera, CheckCircle2, Info } from 'lucide-react'
-import { useAuthContext } from '@/context/AuthContext'
-import { useNotificationContext } from '@/context/NotificationContext'
-import { apiClient } from '@/services/api'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { useNotificationContext } from '@/contexts/NotificationContext'
+import { settingsService } from '@/services/settingsService'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,8 +41,8 @@ export default function ProfileSettings() {
   const onSubmit = async (data) => {
     setIsSaving(true)
     try {
-      const response = await apiClient.patch('/settings/profile', { name: data.name })
-      updateUser(response.data.data.user)
+      const updatedUser = await settingsService.updateProfile({ name: data.name })
+      updateUser(updatedUser)
       success('Profile updated', 'Your profile has been saved.')
     } catch (err) {
       error('Update failed', err.userMessage || 'Failed to update profile.')

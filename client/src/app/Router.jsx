@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
-import { useAuthContext } from '@/context/AuthContext'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { ROUTES } from '@/utils/constants'
 import PageLoader from '@/components/common/PageLoader'
+import RouteErrorBoundary from './RouteErrorBoundary'
 
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
@@ -16,8 +17,8 @@ const AnalyticsPage = lazy(() => import('@/features/analytics/pages/AnalyticsPag
 const PublishingPage = lazy(() => import('@/features/publishing/pages/PublishingPage'))
 const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage'))
 
-const DashboardLayout = lazy(() => import('@/components/layout/DashboardLayout'))
-const AuthLayout = lazy(() => import('@/components/layout/AuthLayout'))
+const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout'))
+const AuthLayout = lazy(() => import('@/layouts/AuthLayout'))
 
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuthContext()
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
 
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: (

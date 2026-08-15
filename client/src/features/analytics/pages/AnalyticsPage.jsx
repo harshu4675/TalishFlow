@@ -26,7 +26,8 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
 } from 'lucide-react'
-import { apiClient } from '@/services/api'
+import { analyticsService } from '@/services/analyticsService'
+import { queryKeys } from '@/utils/queryKeys'
 import PageHeader from '@/components/common/PageHeader'
 import MetricCard from '@/components/common/MetricCard'
 import ChartCard from '@/components/common/ChartCard'
@@ -39,21 +40,6 @@ const PERIODS = [
   { label: '30 Days', value: '30d' },
   { label: '90 Days', value: '90d' },
 ]
-
-async function fetchAnalyticsOverview(period) {
-  const response = await apiClient.get(`/analytics/overview?period=${period}`)
-  return response.data.data
-}
-
-async function fetchTopContent() {
-  const response = await apiClient.get('/analytics/top-content?limit=8')
-  return response.data.data.content
-}
-
-async function fetchPlatformBreakdown(period) {
-  const response = await apiClient.get(`/analytics/platforms?period=${period}`)
-  return response.data.data
-}
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -78,12 +64,12 @@ function ChartTooltip({ active, payload, label }) {
   )
 }
 
-const TopContentCard = memo(function TopContentCard({ item, index }) {
-  const PLATFORM_ICONS = {
-    youtube: { icon: Youtube, color: 'text-error', bg: 'bg-error-light' },
-    instagram: { icon: Instagram, color: 'text-warning', bg: 'bg-warning-light' },
-  }
+const PLATFORM_ICONS = {
+  youtube: { icon: Youtube, color: 'text-error', bg: 'bg-error-light' },
+  instagram: { icon: Instagram, color: 'text-warning', bg: 'bg-warning-light' },
+}
 
+const TopContentCard = memo(function TopContentCard({ item, index }) {
   const platform = PLATFORM_ICONS[item.platform]
   const PlatformIcon = platform?.icon
 
@@ -121,7 +107,7 @@ const TopContentCard = memo(function TopContentCard({ item, index }) {
           href={item.platformVideoUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-foreground-faint hover:text-primary hover:bg-surface-muted rounded-lg p-1.5 opacity-0 transition-all group-hover:opacity-100"
+          className="text-foreground-faint hover:bg-surface-muted hover:text-primary rounded-lg p-1.5 opacity-0 transition-all group-hover:opacity-100"
           aria-label="View on platform"
         >
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -130,6 +116,7 @@ const TopContentCard = memo(function TopContentCard({ item, index }) {
     </div>
   )
 })
+
 TopContentCard.displayName = 'TopContentCard'
 
 const PIE_COLORS = [
@@ -143,20 +130,20 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState('30d')
 
   const { data: overview, isLoading: isLoadingOverview } = useQuery({
-    queryKey: ['analytics', 'overview', period],
-    queryFn: () => fetchAnalyticsOverview(period),
+    queryKey: queryKeys.analytics.overview(period),
+    queryFn: () => analyticsService.getOverview(period),
     staleTime: 1000 * 60 * 5,
   })
 
   const { data: topContent = [], isLoading: isLoadingTop } = useQuery({
-    queryKey: ['analytics', 'top-content'],
-    queryFn: fetchTopContent,
+    queryKey: queryKeys.analytics.topContent,
+    queryFn: () => analyticsService.getTopContent(8),
     staleTime: 1000 * 60 * 5,
   })
 
   const { data: platformData, isLoading: isLoadingPlatform } = useQuery({
-    queryKey: ['analytics', 'platforms', period],
-    queryFn: () => fetchPlatformBreakdown(period),
+    queryKey: queryKeys.analytics.platforms(period),
+    queryFn: () => analyticsService.getPlatforms(period),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -234,172 +221,132 @@ export default function AnalyticsPage() {
           ))}
         </div>
 
-        <ChartCard
-          title="Views Over Time"
-          description="Daily views and likes"
-          isLoading={isLoadingOverview}
-          loadingHeight={260}
-        >
-          <div className="h-[260px] w-full">
-            {!hasChartData ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3">
-                <div className="bg-surface-muted flex h-12 w-12 items-center justify-center rounded-2xl">
-                  <BarChart3
-                    className="text-foreground-faint h-5 w-5"
-                    aria-hidden="true"
-                  />
-                </div>
-                <div className="text-center">
-                  <p className="text-foreground text-sm font-bold">
-                    No view data for this period
-                  </p>
-                  <p className="text-foreground-muted mt-0.5 text-xs">
-                    Publish content to start tracking daily performance.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor="var(--tf-primary)"
-                        stopOpacity={0.18}
-                      />
-                      <stop offset="95%" stopColor="var(--tf-primary)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="likesGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor="var(--tf-success)"
-                        stopOpacity={0.14}
-                      />
-                      <stop offset="95%" stopColor="var(--tf-success)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--tf-border)"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{
-                      fontSize: 11,
-                      fill: 'var(--tf-foreground-muted)',
-                      fontFamily: 'Manrope',
-                    }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval={Math.max(Math.floor(chartData.length / 6), 0)}
-                  />
-                  <YAxis
-                    tick={{
-                      fontSize: 11,
-                      fill: 'var(--tf-foreground-muted)',
-                      fontFamily: 'Manrope',
-                    }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={48}
-                    tickFormatter={formatNumber}
-                  />
-                  <Tooltip
-                    content={<ChartTooltip />}
-                    cursor={{ stroke: 'var(--tf-border)' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="views"
-                    name="Views"
-                    stroke="var(--tf-primary)"
-                    strokeWidth={2.5}
-                    fill="url(#viewsGrad)"
-                    dot={false}
-                    activeDot={{ r: 4, fill: 'var(--tf-primary)', strokeWidth: 0 }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="likes"
-                    name="Likes"
-                    stroke="var(--tf-success)"
-                    strokeWidth={2}
-                    fill="url(#likesGrad)"
-                    dot={false}
-                    activeDot={{ r: 3, fill: 'var(--tf-success)', strokeWidth: 0 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </ChartCard>
-
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
-          <div className="lg:col-span-2">
-            <div className="border-border bg-surface shadow-card h-full rounded-2xl border">
-              <div className="border-border-subtle border-b px-5 py-4">
-                <h2 className="text-foreground text-[15px] font-bold">
-                  Top Performing Content
-                </h2>
-                <p className="text-foreground-muted mt-0.5 text-xs">
-                  Your best published content
-                </p>
-              </div>
-
-              <div className="p-2">
-                {isLoadingTop ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-4 p-3">
-                      <div className="skeleton h-4 w-4 rounded" />
-                      <div className="skeleton h-8 w-8 rounded-lg" />
-                      <div className="flex flex-1 flex-col gap-2">
-                        <div className="skeleton h-3.5 w-40 rounded" />
-                        <div className="skeleton h-3 w-24 rounded" />
-                      </div>
+          <div className="min-w-0 lg:col-span-2">
+            <ChartCard
+              title="Views Over Time"
+              description="Daily views and likes"
+              isLoading={isLoadingOverview}
+              loadingHeight={260}
+            >
+              <div className="h-[260px] w-full">
+                {!hasChartData ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-3">
+                    <div className="bg-surface-muted flex h-12 w-12 items-center justify-center rounded-2xl">
+                      <BarChart3
+                        className="text-foreground-faint h-5 w-5"
+                        aria-hidden="true"
+                      />
                     </div>
-                  ))
-                ) : topContent.length === 0 ? (
-                  <EmptyState
-                    compact
-                    icon={BarChart3}
-                    title="No published content yet"
-                    description="Once you publish your first clip, your top performers will appear here."
-                    action={{
-                      label: 'Upload a video',
-                      onClick: () =>
-                        window.dispatchEvent(new CustomEvent('talishflow:open-upload')),
-                    }}
-                  />
+                    <div className="text-center">
+                      <p className="text-foreground text-sm font-bold">
+                        No view data for this period
+                      </p>
+                      <p className="text-foreground-muted mt-0.5 text-xs">
+                        Publish content to start tracking daily performance.
+                      </p>
+                    </div>
+                  </div>
                 ) : (
-                  topContent.map((item, index) => (
-                    <TopContentCard key={item.jobId} item={item} index={index} />
-                  ))
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={chartData}
+                      margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop
+                            offset="5%"
+                            stopColor="var(--tf-primary)"
+                            stopOpacity={0.18}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="var(--tf-primary)"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient id="likesGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop
+                            offset="5%"
+                            stopColor="var(--tf-success)"
+                            stopOpacity={0.14}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="var(--tf-success)"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--tf-border)"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tick={{
+                          fontSize: 11,
+                          fill: 'var(--tf-foreground-muted)',
+                          fontFamily: 'Manrope',
+                        }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval={Math.max(Math.floor(chartData.length / 6), 0)}
+                      />
+                      <YAxis
+                        tick={{
+                          fontSize: 11,
+                          fill: 'var(--tf-foreground-muted)',
+                          fontFamily: 'Manrope',
+                        }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={48}
+                        tickFormatter={formatNumber}
+                      />
+                      <Tooltip
+                        content={<ChartTooltip />}
+                        cursor={{ stroke: 'var(--tf-border)' }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="views"
+                        name="Views"
+                        stroke="var(--tf-primary)"
+                        strokeWidth={2.5}
+                        fill="url(#viewsGrad)"
+                        dot={false}
+                        activeDot={{ r: 4, fill: 'var(--tf-primary)', strokeWidth: 0 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="likes"
+                        name="Likes"
+                        stroke="var(--tf-success)"
+                        strokeWidth={2}
+                        fill="url(#likesGrad)"
+                        dot={false}
+                        activeDot={{ r: 3, fill: 'var(--tf-success)', strokeWidth: 0 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 )}
               </div>
-            </div>
+            </ChartCard>
           </div>
 
           <div>
-            <div className="border-border bg-surface shadow-card h-full rounded-2xl border">
-              <div className="border-border-subtle border-b px-5 py-4">
-                <h2 className="text-foreground text-[15px] font-bold">
-                  Platform Distribution
-                </h2>
-                <p className="text-foreground-muted mt-0.5 text-xs">
-                  Published content by platform
-                </p>
-              </div>
-
-              <div className="flex flex-col items-center gap-4 p-5">
-                {isLoadingPlatform ? (
-                  <div className="skeleton h-40 w-40 rounded-full" />
-                ) : pieData.every((d) => d.value === 0) ? (
+            <ChartCard
+              title="Platform Distribution"
+              description="Published content by platform"
+              isLoading={isLoadingPlatform}
+              loadingHeight={260}
+            >
+              <div className="flex flex-col items-center gap-4">
+                {pieData.every((d) => d.value === 0) ? (
                   <div className="flex flex-col items-center gap-3 py-6 text-center">
                     <div className="bg-surface-muted flex h-12 w-12 items-center justify-center rounded-2xl">
                       <PieChartIcon
@@ -417,86 +364,128 @@ export default function AnalyticsPage() {
                     </div>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={85}
-                        paddingAngle={3}
-                        dataKey="value"
-                        stroke="var(--tf-surface)"
-                      >
-                        {pieData.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={PIE_COLORS[index % PIE_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [formatNumber(value), 'Posts']} />
-                      <Legend
-                        iconType="circle"
-                        iconSize={8}
-                        formatter={(value) => (
-                          <span className="text-foreground-muted text-xs font-medium">
-                            {value}
-                          </span>
-                        )}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-
-                {platformData && (
-                  <div className="flex w-full flex-col gap-3">
-                    {[
-                      {
-                        platform: 'YouTube',
-                        icon: Youtube,
-                        color: 'text-error',
-                        bg: 'bg-error-light',
-                        value: platformData.youtube?.published || 0,
-                      },
-                      {
-                        platform: 'Instagram',
-                        icon: Instagram,
-                        color: 'text-warning',
-                        bg: 'bg-warning-light',
-                        value: platformData.instagram?.published || 0,
-                      },
-                    ].map((item) => (
-                      <div
-                        key={item.platform}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={cn(
-                              'flex h-7 w-7 items-center justify-center rounded-lg',
-                              item.bg
-                            )}
-                          >
-                            <item.icon
-                              className={cn('h-3.5 w-3.5', item.color)}
-                              aria-hidden="true"
+                  <>
+                    <ResponsiveContainer width="100%" height={190}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={52}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          dataKey="value"
+                          stroke="var(--tf-surface)"
+                        >
+                          {pieData.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={PIE_COLORS[index % PIE_COLORS.length]}
                             />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [formatNumber(value), 'Posts']} />
+                        <Legend
+                          iconType="circle"
+                          iconSize={8}
+                          formatter={(value) => (
+                            <span className="text-foreground-muted text-xs font-medium">
+                              {value}
+                            </span>
+                          )}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+
+                    <div className="flex w-full flex-col gap-2.5">
+                      {[
+                        {
+                          platform: 'YouTube',
+                          icon: Youtube,
+                          color: 'text-error',
+                          bg: 'bg-error-light',
+                          value: platformData.youtube?.published || 0,
+                        },
+                        {
+                          platform: 'Instagram',
+                          icon: Instagram,
+                          color: 'text-warning',
+                          bg: 'bg-warning-light',
+                          value: platformData.instagram?.published || 0,
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.platform}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={cn(
+                                'flex h-7 w-7 items-center justify-center rounded-lg',
+                                item.bg
+                              )}
+                            >
+                              <item.icon
+                                className={cn('h-3.5 w-3.5', item.color)}
+                                aria-hidden="true"
+                              />
+                            </div>
+                            <span className="text-foreground text-sm font-semibold">
+                              {item.platform}
+                            </span>
                           </div>
-                          <span className="text-foreground text-sm font-semibold">
-                            {item.platform}
+                          <span className="text-foreground text-sm font-bold">
+                            {item.value} posts
                           </span>
                         </div>
-                        <span className="text-foreground text-sm font-bold">
-                          {item.value} posts
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
-            </div>
+            </ChartCard>
+          </div>
+        </div>
+
+        <div className="border-border bg-surface shadow-card rounded-2xl border">
+          <div className="border-border-subtle border-b px-5 py-4">
+            <h2 className="text-foreground text-[15px] font-bold">
+              Top Performing Content
+            </h2>
+            <p className="text-foreground-muted mt-0.5 text-xs">
+              Your best published content
+            </p>
+          </div>
+
+          <div className="p-2">
+            {isLoadingTop ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-3">
+                  <div className="skeleton h-4 w-4 rounded" />
+                  <div className="skeleton h-8 w-8 rounded-lg" />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <div className="skeleton h-3.5 w-40 rounded" />
+                    <div className="skeleton h-3 w-24 rounded" />
+                  </div>
+                </div>
+              ))
+            ) : topContent.length === 0 ? (
+              <EmptyState
+                compact
+                icon={BarChart3}
+                title="No published content yet"
+                description="Once you publish your first clip, your top performers will appear here."
+                action={{
+                  label: 'Upload a video',
+                  onClick: () =>
+                    window.dispatchEvent(new CustomEvent('talishflow:open-upload')),
+                }}
+              />
+            ) : (
+              topContent.map((item, index) => (
+                <TopContentCard key={item.jobId} item={item} index={index} />
+              ))
+            )}
           </div>
         </div>
       </div>

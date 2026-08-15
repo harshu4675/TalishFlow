@@ -1,19 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { HardDrive, Video, Scissors, FileText } from 'lucide-react'
-import { apiClient } from '@/services/api'
+import { analyticsService } from '@/services/analyticsService'
+import { queryKeys } from '@/utils/queryKeys'
 import { formatFileSize, formatPercent } from '@/utils/formatters'
 import { cn } from '@/utils/cn'
 import { motion } from 'framer-motion'
 
-async function fetchStorage() {
-  const response = await apiClient.get('/analytics/storage')
-  return response.data.data
-}
-
 const STORAGE_LIMIT = 50 * 1024 * 1024 * 1024
 
-function StorageSegment({ label, icon: Icon, color, bg, bytes, total }) {
-  void Icon
+function StorageSegment({ label, icon, color, bg, bytes, total }) {
+  const Icon = icon
   const percent = total > 0 ? (bytes / total) * 100 : 0
 
   return (
@@ -36,8 +32,8 @@ function StorageSegment({ label, icon: Icon, color, bg, bytes, total }) {
 
 export default function StorageUsage() {
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics', 'storage'],
-    queryFn: fetchStorage,
+    queryKey: queryKeys.dashboard.storage,
+    queryFn: analyticsService.getStorage,
     staleTime: 1000 * 60 * 5,
   })
 

@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import LoginForm from '../components/LoginForm'
 import OAuthButtons from '../components/OAuthButtons'
 import useAuth from '../hooks/useAuth'
-import { useNotificationContext } from '@/context/NotificationContext'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { ROUTES } from '@/utils/constants'
 import PageTitle from '@/components/common/PageTitle'
 

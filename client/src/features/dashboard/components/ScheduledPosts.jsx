@@ -2,17 +2,13 @@ import { memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Calendar, Youtube, Instagram, Clock } from 'lucide-react'
-import { apiClient } from '@/services/api'
-import { QUERY_KEYS, ROUTES } from '@/utils/constants'
+import { publishingService } from '@/services/publishingService'
+import { ROUTES } from '@/utils/constants'
+import { queryKeys } from '@/utils/queryKeys'
 import { formatDateTime } from '@/utils/formatters'
 import { cn } from '@/utils/cn'
 import EmptyState from '@/components/common/EmptyState'
 import { motion } from 'framer-motion'
-
-async function fetchScheduled() {
-  const response = await apiClient.get('/publishing/scheduled?limit=5')
-  return response.data.data
-}
 
 const PLATFORM_CONFIG = {
   youtube: {
@@ -91,8 +87,8 @@ function ScheduledItemSkeleton() {
 export default function ScheduledPosts() {
   const navigate = useNavigate()
   const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD.SCHEDULED,
-    queryFn: fetchScheduled,
+    queryKey: queryKeys.dashboard.scheduled,
+    queryFn: () => publishingService.getScheduledPosts({ limit: 5 }),
     staleTime: 1000 * 60 * 2,
   })
 

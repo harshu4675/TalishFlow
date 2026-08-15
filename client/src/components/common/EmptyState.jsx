@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 
 export default function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
@@ -12,6 +12,7 @@ export default function EmptyState({
   compact = false,
   dark = false,
 }) {
+  const Icon = icon
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}

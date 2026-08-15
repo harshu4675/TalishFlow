@@ -1,13 +1,13 @@
-import { apiClient } from '@/services/api'
+import http from './http'
 
-const timelineService = {
+export const timelineService = {
   getWaveform: async (clipId) => {
-    const response = await apiClient.get(`/timeline/clips/${clipId}/waveform`)
+    const response = await http.get(`/timeline/clips/${clipId}/waveform`)
     return response.data.data
   },
 
   trimClip: async (clipId, startTime, endTime) => {
-    const response = await apiClient.post(`/timeline/clips/${clipId}/trim`, {
+    const response = await http.post(`/timeline/clips/${clipId}/trim`, {
       startTime,
       endTime,
     })
@@ -15,19 +15,19 @@ const timelineService = {
   },
 
   splitClip: async (clipId, splitTime) => {
-    const response = await apiClient.post(`/timeline/clips/${clipId}/split`, {
+    const response = await http.post(`/timeline/clips/${clipId}/split`, {
       splitTime,
     })
     return response.data
   },
 
   getReframingOptions: async (clipId) => {
-    const response = await apiClient.get(`/timeline/clips/${clipId}/reframing/options`)
+    const response = await http.get(`/timeline/clips/${clipId}/reframing/options`)
     return response.data.data
   },
 
   applyReframing: async (clipId, cropData) => {
-    const response = await apiClient.post(`/timeline/clips/${clipId}/reframing/apply`, {
+    const response = await http.post(`/timeline/clips/${clipId}/reframing/apply`, {
       cropData,
     })
     return response.data

@@ -1,8 +1,9 @@
 import { useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import useProcessingSocket from '@/hooks/useWebSocket'
-import { useNotificationContext } from '@/context/NotificationContext'
-import { QUERY_KEYS, PROCESSING_STATUS_LABELS } from '@/utils/constants'
+import { useNotificationContext } from '@/contexts/NotificationContext'
+import { PROCESSING_STATUS_LABELS } from '@/utils/constants'
+import { queryKeys } from '@/utils/queryKeys'
 
 export default function useProcessing() {
   const queryClient = useQueryClient()
@@ -28,7 +29,7 @@ export default function useProcessing() {
         )
       }
 
-      queryClient.invalidateQueries({ queryKey: ['processing', 'queue'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.processingQueue })
     },
     [queryClient, progress, update]
   )
@@ -48,9 +49,9 @@ export default function useProcessing() {
         success('Processing complete', `Your clips are ready.`)
       }
 
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.RECENT_CLIPS })
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.RECENT_UPLOADS })
-      queryClient.invalidateQueries({ queryKey: ['processing', 'queue'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.recentClips })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.recentUploads })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.processingQueue })
     },
     [queryClient, success, update]
   )
@@ -70,7 +71,7 @@ export default function useProcessing() {
         error('Processing failed', errorMessage || 'An error occurred.')
       }
 
-      queryClient.invalidateQueries({ queryKey: ['processing', 'queue'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.processingQueue })
     },
     [queryClient, error, update]
   )

@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import ForgotPasswordForm from '../components/ForgotPasswordForm'
-import authService from '../services/authService'
-import { useNotificationContext } from '@/context/NotificationContext'
+import authService from '@/services/authService'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { ROUTES } from '@/utils/constants'
 
 export default function ForgotPasswordPage() {

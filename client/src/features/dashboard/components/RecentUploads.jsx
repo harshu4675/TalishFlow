@@ -9,17 +9,13 @@ import {
   Loader2,
   ChevronRight,
 } from 'lucide-react'
-import { apiClient } from '@/services/api'
-import { QUERY_KEYS, PROCESSING_STATUS } from '@/utils/constants'
+import { videoService } from '@/services/videoService'
+import { PROCESSING_STATUS } from '@/utils/constants'
+import { queryKeys } from '@/utils/queryKeys'
 import { formatRelativeTime, formatDuration, formatFileSize } from '@/utils/formatters'
 import { cn } from '@/utils/cn'
 import EmptyState from '@/components/common/EmptyState'
 import { motion } from 'framer-motion'
-
-async function fetchRecentUploads() {
-  const response = await apiClient.get('/videos?limit=5&sort=-createdAt')
-  return response.data.data
-}
 
 function StatusBadge({ status }) {
   const config = {
@@ -154,8 +150,8 @@ function UploadRowSkeleton() {
 
 export default function RecentUploads() {
   const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD.RECENT_UPLOADS,
-    queryFn: fetchRecentUploads,
+    queryKey: queryKeys.dashboard.recentUploads,
+    queryFn: () => videoService.listVideos({ limit: 5, sort: '-createdAt' }),
     staleTime: 1000 * 60,
   })
 

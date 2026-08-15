@@ -20,15 +20,6 @@ export const ROUTES = {
   SETTINGS_SECURITY: '/settings/security',
 }
 
-export const QUERY_KEYS = {
-  DASHBOARD: {
-    STATS: ['dashboard', 'stats'],
-    RECENT_UPLOADS: ['dashboard', 'recent-uploads'],
-    RECENT_CLIPS: ['dashboard', 'recent-clips'],
-    SCHEDULED: ['dashboard', 'scheduled'],
-  },
-}
-
 export const UPLOAD_CONFIG = {
   MAX_FILE_SIZE: 5 * 1024 * 1024 * 1024,
   CHUNK_SIZE: 5 * 1024 * 1024,

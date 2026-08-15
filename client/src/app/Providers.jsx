@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { AuthProvider } from '@/context/AuthContext'
-import { ThemeProvider } from '@/context/ThemeContext'
-import { NotificationProvider } from '@/context/NotificationContext'
-import { UploadProvider } from '@/context/UploadContext'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
+import { NotificationProvider } from '@/contexts/NotificationContext'
+import { UploadProvider } from '@/contexts/UploadContext'
 
 const queryClient = new QueryClient({
   defaultOptions: {

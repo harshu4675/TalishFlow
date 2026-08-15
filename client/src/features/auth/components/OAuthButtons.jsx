@@ -1,5 +1,5 @@
 import { cn } from '@/utils/cn'
-import authService from '../services/authService'
+import authService from '@/services/authService'
 
 function GoogleIcon() {
   return (

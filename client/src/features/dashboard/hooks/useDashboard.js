@@ -1,62 +1,47 @@
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '@/services/api'
-import { QUERY_KEYS } from '@/utils/constants'
-
-async function fetchDashboardStats() {
-  const response = await apiClient.get('/analytics/dashboard-stats')
-  return response.data.data
-}
-
-async function fetchRecentUploads() {
-  const response = await apiClient.get('/videos?limit=5&sort=-createdAt')
-  return response.data.data
-}
-
-async function fetchRecentClips() {
-  const response = await apiClient.get('/clips?limit=6&sort=-createdAt')
-  return response.data.data
-}
-
-async function fetchScheduledPosts() {
-  const response = await apiClient.get('/publishing/scheduled?limit=5')
-  return response.data.data
-}
-
-async function fetchProcessingQueue() {
-  const response = await apiClient.get('/processing/queue')
-  return response.data.data
-}
+import { analyticsService } from '@/services/analyticsService'
+import { videoService } from '@/services/videoService'
+import { clipService } from '@/services/clipService'
+import { publishingService } from '@/services/publishingService'
+import { processingService } from '@/services/processingService'
+import { queryKeys } from '@/utils/queryKeys'
 
 export function useDashboard() {
   const statsQuery = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD.STATS,
-    queryFn: fetchDashboardStats,
+    queryKey: queryKeys.dashboard.stats,
+    queryFn: analyticsService.getDashboardStats,
     staleTime: 1000 * 60 * 2,
   })
 
   const recentUploadsQuery = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD.RECENT_UPLOADS,
-    queryFn: fetchRecentUploads,
-    staleTime: 1000 * 60 * 1,
+    queryKey: queryKeys.dashboard.recentUploads,
+    queryFn: () => videoService.listVideos({ limit: 5, sort: '-createdAt' }),
+    staleTime: 1000 * 60,
   })
 
   const recentClipsQuery = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD.RECENT_CLIPS,
-    queryFn: fetchRecentClips,
-    staleTime: 1000 * 60 * 1,
+    queryKey: queryKeys.dashboard.recentClips,
+    queryFn: () => clipService.listClips({ limit: 6, sort: '-createdAt' }),
+    staleTime: 1000 * 60,
   })
 
   const scheduledQuery = useQuery({
-    queryKey: QUERY_KEYS.DASHBOARD.SCHEDULED,
-    queryFn: fetchScheduledPosts,
+    queryKey: queryKeys.dashboard.scheduled,
+    queryFn: () => publishingService.getScheduledPosts({ limit: 5 }),
     staleTime: 1000 * 60 * 2,
   })
 
   const processingQuery = useQuery({
-    queryKey: ['processing', 'queue'],
-    queryFn: fetchProcessingQueue,
+    queryKey: queryKeys.dashboard.processingQueue,
+    queryFn: processingService.getQueue,
     staleTime: 1000 * 30,
     refetchInterval: 1000 * 15,
+  })
+
+  const storageQuery = useQuery({
+    queryKey: queryKeys.dashboard.storage,
+    queryFn: analyticsService.getStorage,
+    staleTime: 1000 * 60 * 5,
   })
 
   return {
@@ -74,5 +59,8 @@ export function useDashboard() {
 
     processingJobs: processingQuery.data?.jobs || [],
     isLoadingQueue: processingQuery.isLoading,
+
+    storage: storageQuery.data,
+    isLoadingStorage: storageQuery.isLoading,
   }
 }

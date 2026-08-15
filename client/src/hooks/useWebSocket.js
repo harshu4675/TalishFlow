@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { io } from 'socket.io-client'
-import { useAuthContext } from '@/context/AuthContext'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export default function useProcessingSocket(handlers = {}) {
   const { isAuthenticated } = useAuthContext()

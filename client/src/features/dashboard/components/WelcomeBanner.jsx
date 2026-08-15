@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Upload, Link2, ArrowRight, Zap, CheckCircle2 } from 'lucide-react'
-import { useAuthContext } from '@/context/AuthContext'
+import { useAuthContext } from '@/contexts/AuthContext'
 import StatusIndicator from '@/components/common/StatusIndicator'
 import { Button } from '@/components/ui/button'
 

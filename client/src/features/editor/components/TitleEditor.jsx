@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Loader2, Copy, Check, Wand2 } from 'lucide-react'
 import clipService from '@/services/clipService'
-import { useNotificationContext } from '@/context/NotificationContext'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { copyToClipboard } from '@/utils/helpers'
 import { cn } from '@/utils/cn'
 

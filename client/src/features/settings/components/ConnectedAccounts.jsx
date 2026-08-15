@@ -1,16 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Youtube, Instagram, Link2, Unlink, Info } from 'lucide-react'
-import { apiClient } from '@/services/api'
-import { useNotificationContext } from '@/context/NotificationContext'
+import { settingsService } from '@/services/settingsService'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils/cn'
-import authService from '@/features/auth/services/authService'
+import authService from '@/services/authService'
 
-async function fetchConnectedAccounts() {
-  const response = await apiClient.get('/settings/connected-accounts')
-  return response.data.data.accounts
-}
+const fetchConnectedAccounts = () => settingsService.getConnectedAccounts()
 
 const PLATFORMS = [
   {
@@ -108,8 +105,7 @@ export default function ConnectedAccounts() {
   })
 
   const disconnectMutation = useMutation({
-    mutationFn: (platform) =>
-      apiClient.delete(`/settings/connected-accounts/${platform}`),
+    mutationFn: (platform) => settingsService.disconnectAccount(platform),
     onSuccess: (_, platform) => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'connected-accounts'] })
       success('Account disconnected', `Your ${platform} account has been disconnected.`)
