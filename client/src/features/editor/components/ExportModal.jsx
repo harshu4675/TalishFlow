@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { X, Download, Loader2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -54,7 +54,7 @@ export default function ExportModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
+        <div className="z-modal fixed inset-0 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -68,37 +68,34 @@ export default function ExportModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 w-full max-w-[480px] bg-[#141B22] border border-white/10 rounded-3xl shadow-float overflow-hidden"
+            className="shadow-float relative z-10 w-full max-w-[480px] overflow-hidden rounded-3xl border border-white/10 bg-[#141B22]"
             role="dialog"
             aria-modal="true"
             aria-labelledby="export-title"
           >
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
               <div>
-                <h2
-                  id="export-title"
-                  className="text-[15px] font-extrabold text-white"
-                >
+                <h2 id="export-title" className="text-[15px] font-extrabold text-white">
                   Export Clip
                 </h2>
                 {clipTitle && (
-                  <p className="text-xs text-white/40 mt-0.5 truncate max-w-[300px]">
+                  <p className="mt-0.5 max-w-[300px] truncate text-xs text-white/40">
                     {clipTitle}
                   </p>
                 )}
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                className="rounded-xl p-2 text-white/40 transition-all hover:bg-white/10 hover:text-white"
                 aria-label="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-5">
+            <div className="flex flex-col gap-5 p-6">
               <div className="flex flex-col gap-2">
-                <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest">
+                <p className="text-[11px] font-bold tracking-widest text-white/40 uppercase">
                   Quality
                 </p>
                 <div className="flex flex-col gap-2">
@@ -107,28 +104,30 @@ export default function ExportModal({
                       key={option.value}
                       onClick={() => setQuality(option.value)}
                       className={cn(
-                        'flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-left',
+                        'flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all',
                         quality === option.value
-                          ? 'border-[#2874F0] bg-[#2874F0]/10'
-                          : 'border-white/10 hover:border-white/30 bg-white/5'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-white/10 bg-white/5 hover:border-white/30'
                       )}
                     >
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-white">{option.label}</p>
                           {option.badge && (
-                            <span className="text-[10px] font-bold text-[#2874F0] bg-[#2874F0]/20 px-2 py-0.5 rounded-full">
+                            <span className="text-primary bg-primary/20 rounded-full px-2 py-0.5 text-[10px] font-bold">
                               {option.badge}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-white/40 mt-0.5">{option.description}</p>
+                        <p className="mt-0.5 text-xs text-white/40">
+                          {option.description}
+                        </p>
                       </div>
                       <div
                         className={cn(
-                          'w-4 h-4 rounded-full border-2 flex-shrink-0',
+                          'h-4 w-4 flex-shrink-0 rounded-full border-2',
                           quality === option.value
-                            ? 'border-[#2874F0] bg-[#2874F0]'
+                            ? 'border-primary bg-primary'
                             : 'border-white/30'
                         )}
                       />
@@ -138,7 +137,7 @@ export default function ExportModal({
               </div>
 
               <div className="flex flex-col gap-2">
-                <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest">
+                <p className="text-[11px] font-bold tracking-widest text-white/40 uppercase">
                   Codec
                 </p>
                 <div className="flex gap-2">
@@ -147,21 +146,21 @@ export default function ExportModal({
                       key={option.value}
                       onClick={() => setCodec(option.value)}
                       className={cn(
-                        'flex-1 flex flex-col items-start px-3 py-3 rounded-xl border transition-all',
+                        'flex flex-1 flex-col items-start rounded-xl border px-3 py-3 transition-all',
                         codec === option.value
-                          ? 'border-[#2874F0] bg-[#2874F0]/10'
-                          : 'border-white/10 hover:border-white/30 bg-white/5'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-white/10 bg-white/5 hover:border-white/30'
                       )}
                     >
-                      <div className="flex items-center gap-1.5 mb-1">
+                      <div className="mb-1 flex items-center gap-1.5">
                         <p className="text-xs font-bold text-white">{option.label}</p>
                         {option.badge && (
-                          <span className="text-[9px] font-bold text-[#22C55E] bg-[#22C55E]/20 px-1.5 py-0.5 rounded-full">
+                          <span className="text-success bg-success/20 rounded-full px-1.5 py-0.5 text-[9px] font-bold">
                             {option.badge}
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-white/30 leading-snug">
+                      <p className="text-[10px] leading-snug text-white/30">
                         {option.description}
                       </p>
                     </button>
@@ -173,7 +172,7 @@ export default function ExportModal({
                 <button
                   onClick={onClose}
                   disabled={isExporting}
-                  className="flex-1 py-3 rounded-xl border border-white/20 text-sm font-semibold text-white/60 hover:text-white hover:border-white/40 transition-all disabled:opacity-40"
+                  className="flex-1 rounded-xl border border-white/20 py-3 text-sm font-semibold text-white/60 transition-all hover:border-white/40 hover:text-white disabled:opacity-40"
                 >
                   Cancel
                 </button>
@@ -181,16 +180,20 @@ export default function ExportModal({
                   onClick={() => onExport({ quality, codec })}
                   disabled={isExporting}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl',
-                    'bg-[#2874F0] hover:bg-[#1B5FCC] text-white text-sm font-semibold',
-                    'transition-all shadow-md shadow-primary/20',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                    'flex flex-1 items-center justify-center gap-2 rounded-xl py-3',
+                    'bg-primary hover:bg-primary-hover text-sm font-semibold text-white',
+                    'shadow-primary/20 shadow-md transition-all',
+                    'disabled:cursor-not-allowed disabled:opacity-50'
                   )}
                 >
                   {isExporting ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Exporting...</>
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Exporting...
+                    </>
                   ) : (
-                    <><Download className="w-4 h-4" /> Export</>
+                    <>
+                      <Download className="h-4 w-4" /> Export
+                    </>
                   )}
                 </button>
               </div>

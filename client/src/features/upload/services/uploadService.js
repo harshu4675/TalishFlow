@@ -151,7 +151,4 @@ export async function uploadYouTubeUrl({ url, clipCount }) {
   return response.data.data
 }
 
-export {
-  cancelUpload,
-  getUploadStatus,
-}
+export { cancelUpload, getUploadStatus }

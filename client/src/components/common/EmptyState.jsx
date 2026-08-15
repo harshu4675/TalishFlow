@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion'
 import { cn } from '@/utils/cn'
+import { Button } from '@/components/ui/button'
+import { motion } from 'framer-motion'
 
 export default function EmptyState({
   icon: Icon,
@@ -15,22 +16,22 @@ export default function EmptyState({
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
         'flex flex-col items-center justify-center text-center',
-        compact ? 'px-4 py-8' : 'px-6 py-14',
+        compact ? 'px-4 py-8' : 'px-6 py-12',
         className
       )}
     >
       {Icon && (
         <div
           className={cn(
-            'mb-5 flex h-12 w-12 items-center justify-center rounded-2xl',
-            dark ? 'bg-white/10' : 'bg-[#F8F9FA]'
+            'mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border',
+            dark ? 'border-white/10 bg-white/5' : 'border-border bg-surface-muted'
           )}
         >
           <Icon
-            className={cn('h-5 w-5', dark ? 'text-white/40' : 'text-[#878787]')}
+            className={cn('h-5 w-5', dark ? 'text-white/40' : 'text-foreground-faint')}
             aria-hidden="true"
           />
         </div>
@@ -39,9 +40,9 @@ export default function EmptyState({
       {title && (
         <p
           className={cn(
-            'mb-2 font-bold',
+            'mb-1.5 font-bold',
             compact ? 'text-sm' : 'text-[15px]',
-            dark ? 'text-white' : 'text-[#212121]'
+            dark ? 'text-white' : 'text-foreground'
           )}
         >
           {title}
@@ -53,7 +54,7 @@ export default function EmptyState({
           className={cn(
             'max-w-xs leading-relaxed',
             compact ? 'text-xs' : 'text-sm',
-            dark ? 'text-white/40' : 'text-[#878787]'
+            dark ? 'text-white/40' : 'text-foreground-muted'
           )}
         >
           {description}
@@ -61,32 +62,20 @@ export default function EmptyState({
       )}
 
       {(action || secondaryAction) && (
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           {action && (
-            <button
-              onClick={action.onClick}
-              className={cn(
-                'rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-150',
-                'focus-visible:ring-primary/50 shadow-md focus-visible:ring-2 focus-visible:outline-none',
-                'bg-[#2874F0] hover:bg-[#1B5FCC] shadow-primary/20 text-white'
-              )}
-            >
+            <Button size="sm" onClick={action.onClick}>
               {action.label}
-            </button>
+            </Button>
           )}
-
           {secondaryAction && (
-            <button
+            <Button
+              size="sm"
+              variant={dark ? 'ghost' : 'outline'}
               onClick={secondaryAction.onClick}
-              className={cn(
-                'rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-150',
-                dark
-                  ? 'text-white/60 hover:bg-white/10 hover:text-white'
-                  : 'text-[#878787] hover:text-[#212121] hover:bg-[#F8F9FA] border-[#E0E0E0] border'
-              )}
             >
               {secondaryAction.label}
-            </button>
+            </Button>
           )}
         </div>
       )}

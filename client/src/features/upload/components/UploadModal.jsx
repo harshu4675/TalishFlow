@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { X, Upload, Link2, ChevronDown } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Upload, Link2 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import DropZone from './DropZone'
 import YoutubeUrlInput from './YoutubeUrlInput'
 import UploadQueue from './UploadQueue'
@@ -68,7 +75,10 @@ export default function UploadModal() {
         success('Upload complete', `${file.name} is queued for processing.`)
       } catch (uploadError) {
         if (uploadError.name !== 'AbortError') {
-          error('Upload failed', uploadError.userMessage || `Could not upload ${file.name}.`)
+          error(
+            'Upload failed',
+            uploadError.userMessage || `Could not upload ${file.name}.`
+          )
         }
       }
     })
@@ -84,7 +94,10 @@ export default function UploadModal() {
       success('Video added', `${result.video.title} is queued for processing.`)
       setIsOpen(false)
     } catch (uploadError) {
-      error('Could not add video', uploadError.userMessage || 'Please check the URL and try again.')
+      error(
+        'Could not add video',
+        uploadError.userMessage || 'Please check the URL and try again.'
+      )
     } finally {
       setIsImportingYoutube(false)
     }
@@ -93,12 +106,12 @@ export default function UploadModal() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6">
+        <div className="z-modal fixed inset-0 flex items-center justify-center p-4 sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-[#212121]/40 backdrop-blur-sm"
+            className="bg-overlay absolute inset-0 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
 
@@ -107,84 +120,85 @@ export default function UploadModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 16 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 w-full max-w-[640px] max-h-[90dvh] overflow-y-auto no-scrollbar bg-white rounded-3xl border border-[#E0E0E0] shadow-float"
+            className="no-scrollbar bg-surface border-border shadow-float relative z-10 max-h-[90dvh] w-full max-w-[640px] overflow-y-auto rounded-3xl border"
             role="dialog"
             aria-modal="true"
             aria-labelledby="upload-modal-title"
           >
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#E0E0E0]">
+            <div className="border-border flex items-center justify-between border-b px-6 py-5">
               <div>
                 <h2
                   id="upload-modal-title"
-                  className="text-lg font-extrabold text-[#212121] tracking-tight"
+                  className="text-foreground text-lg font-extrabold tracking-tight"
                 >
                   Create New Project
                 </h2>
-                <p className="text-xs text-[#878787] mt-1">
+                <p className="text-foreground-muted mt-1 text-xs">
                   Upload a video or import one from YouTube.
                 </p>
               </div>
 
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 rounded-xl text-[#878787] hover:text-[#212121] hover:bg-[#F8F9FA] transition-colors"
+                className="text-foreground-muted hover:text-foreground hover:bg-surface-muted rounded-xl p-2 transition-colors"
                 aria-label="Close upload modal"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="p-6 flex flex-col gap-6">
-              <div className="flex items-center gap-1 p-1 bg-[#F8F9FA] rounded-xl">
+            <div className="flex flex-col gap-6 p-6">
+              <div className="bg-surface-muted flex items-center gap-1 rounded-xl p-1">
                 <button
                   onClick={() => setTab('upload')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all',
+                    'flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all',
                     tab === 'upload'
-                      ? 'bg-white text-[#212121] shadow-sm'
-                      : 'text-[#878787] hover:text-[#212121]'
+                      ? 'bg-surface text-foreground shadow-sm'
+                      : 'text-foreground-muted hover:text-foreground'
                   )}
                 >
-                  <Upload className="w-4 h-4" />
+                  <Upload className="h-4 w-4" />
                   Upload File
                 </button>
 
                 <button
                   onClick={() => setTab('youtube')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all',
+                    'flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all',
                     tab === 'youtube'
-                      ? 'bg-white text-[#212121] shadow-sm'
-                      : 'text-[#878787] hover:text-[#212121]'
+                      ? 'bg-surface text-foreground shadow-sm'
+                      : 'text-foreground-muted hover:text-foreground'
                   )}
                 >
-                  <Link2 className="w-4 h-4" />
+                  <Link2 className="h-4 w-4" />
                   YouTube URL
                 </button>
               </div>
 
-              <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-[#F8F9FA] border border-[#E0E0E0]">
+              <div className="bg-surface-muted border-border flex items-center justify-between gap-4 rounded-xl border px-4 py-3">
                 <div>
-                  <p className="text-sm font-bold text-[#212121]">Generate clips</p>
-                  <p className="text-xs text-[#878787] mt-0.5">
+                  <p className="text-foreground text-sm font-bold">Generate clips</p>
+                  <p className="text-foreground-muted mt-0.5 text-xs">
                     Choose how many top moments to create.
                   </p>
                 </div>
 
-                <div className="relative">
-                  <select
-                    value={clipCount}
-                    onChange={(event) => setClipCount(Number(event.target.value))}
-                    className="appearance-none bg-white border border-[#E0E0E0] rounded-xl pl-3 pr-9 py-2 text-sm font-bold text-[#212121] outline-none focus:ring-2 focus:ring-primary/30 focus:border-[#2874F0]"
-                  >
+                <Select
+                  value={String(clipCount)}
+                  onValueChange={(value) => setClipCount(Number(value))}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {clipOptions.map((count) => (
-                      <option key={count} value={count}>
+                      <SelectItem key={count} value={String(count)}>
                         Top {count}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#878787] pointer-events-none" />
-                </div>
+                  </SelectContent>
+                </Select>
               </div>
 
               {tab === 'upload' ? (

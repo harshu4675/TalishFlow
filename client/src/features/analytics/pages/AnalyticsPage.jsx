@@ -1,11 +1,8 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,14 +18,19 @@ import {
   ThumbsUp,
   MessageSquare,
   Share2,
-  Youtube,
-  Instagram,
   TrendingUp,
   Clock,
   ExternalLink,
+  Youtube,
+  Instagram,
+  BarChart3,
+  PieChart as PieChartIcon,
 } from 'lucide-react'
 import { apiClient } from '@/services/api'
-import PageTitle from '@/components/common/PageTitle'
+import PageHeader from '@/components/common/PageHeader'
+import MetricCard from '@/components/common/MetricCard'
+import ChartCard from '@/components/common/ChartCard'
+import EmptyState from '@/components/common/EmptyState'
 import { cn } from '@/utils/cn'
 import { formatNumber, formatRelativeTime } from '@/utils/formatters'
 
@@ -53,17 +55,21 @@ async function fetchPlatformBreakdown(period) {
   return response.data.data
 }
 
-function CustomTooltip({ active, payload, label }) {
+function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
 
   return (
-    <div className="bg-white border border-[#E0E0E0] rounded-xl shadow-float px-4 py-3">
-      <p className="text-xs font-semibold text-[#878787] mb-2">{label}</p>
+    <div className="border-border bg-surface shadow-popover rounded-xl border px-3.5 py-2.5">
+      <p className="text-foreground-muted mb-1.5 text-xs font-semibold">{label}</p>
       {payload.map((entry, i) => (
         <div key={i} className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-xs text-[#878787] capitalize">{entry.name}:</span>
-          <span className="text-xs font-bold text-[#212121]">
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: entry.color }}
+            aria-hidden="true"
+          />
+          <span className="text-foreground-muted text-xs capitalize">{entry.name}:</span>
+          <span className="text-foreground text-xs font-bold">
             {formatNumber(entry.value)}
           </span>
         </div>
@@ -72,89 +78,40 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-function MetricCard({ icon: Icon, label, value, change, color, bg, isLoading }) {
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-2xl border border-[#E0E0E0] p-5">
-        <div className="flex flex-col gap-3">
-          <div className="skeleton h-4 w-20 rounded" />
-          <div className="skeleton h-8 w-24 rounded" />
-          <div className="skeleton h-3 w-32 rounded" />
-        </div>
-      </div>
-    )
-  }
-
-  const isPositive = change >= 0
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl border border-[#E0E0E0] p-5 hover:shadow-md transition-all"
-    >
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-sm font-semibold text-[#878787]">{label}</p>
-        <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', bg)}>
-          <Icon className={cn('w-4 h-4', color)} />
-        </div>
-      </div>
-
-      <p className="text-[28px] font-extrabold text-[#212121] tracking-tight leading-none mb-2">
-        {formatNumber(value || 0)}
-      </p>
-
-      {change !== undefined && (
-        <div className="flex items-center gap-1.5">
-          <TrendingUp
-            className={cn('w-3.5 h-3.5', isPositive ? 'text-[#22C55E]' : 'text-[#EF4444]')}
-          />
-          <span
-            className={cn(
-              'text-xs font-semibold',
-              isPositive ? 'text-[#22C55E]' : 'text-[#EF4444]'
-            )}
-          >
-            {isPositive ? '+' : ''}{change}%
-          </span>
-          <span className="text-xs text-[#878787]">vs last period</span>
-        </div>
-      )}
-    </motion.div>
-  )
-}
-
-function TopContentCard({ item, index }) {
+const TopContentCard = memo(function TopContentCard({ item, index }) {
   const PLATFORM_ICONS = {
-    youtube: { icon: Youtube, color: 'text-[#EF4444]', bg: 'bg-[#EF4444]/10' },
-    instagram: { icon: Instagram, color: 'text-[#F59E0B]', bg: 'bg-[#F59E0B]/10' },
+    youtube: { icon: Youtube, color: 'text-error', bg: 'bg-error-light' },
+    instagram: { icon: Instagram, color: 'text-warning', bg: 'bg-warning-light' },
   }
 
   const platform = PLATFORM_ICONS[item.platform]
   const PlatformIcon = platform?.icon
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.04 }}
-      className="flex items-center gap-4 p-4 rounded-xl hover:bg-[#F8F9FA] transition-all group"
-    >
-      <span className="text-sm font-black text-[#878787] w-5 text-center">
+    <div className="group hover:bg-surface-muted flex items-center gap-4 rounded-xl p-3 transition-colors">
+      <span className="text-foreground-faint w-5 text-center text-sm font-black">
         {index + 1}
       </span>
 
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#F8F9FA]">
+      <div
+        className={cn(
+          'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg',
+          platform?.bg || 'bg-surface-muted'
+        )}
+      >
         {PlatformIcon && (
-          <PlatformIcon className={cn('w-4 h-4', platform?.color)} />
+          <PlatformIcon
+            className={cn('h-4 w-4', platform?.color || 'text-foreground-muted')}
+            aria-hidden="true"
+          />
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#212121] truncate">
+      <div className="min-w-0 flex-1">
+        <p className="text-foreground truncate text-sm font-semibold">
           {item.title || 'Untitled'}
         </p>
-        <p className="text-xs text-[#878787] mt-0.5">
+        <p className="text-foreground-faint mt-0.5 text-xs">
           {formatRelativeTime(item.publishedAt)}
         </p>
       </div>
@@ -164,17 +121,23 @@ function TopContentCard({ item, index }) {
           href={item.platformVideoUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg text-[#878787] hover:text-[#2874F0] hover:bg-[#2874F0]/10"
+          className="text-foreground-faint hover:text-primary hover:bg-surface-muted rounded-lg p-1.5 opacity-0 transition-all group-hover:opacity-100"
           aria-label="View on platform"
         >
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
       )}
-    </motion.div>
+    </div>
   )
-}
+})
+TopContentCard.displayName = 'TopContentCard'
 
-const PIE_COLORS = ['#2874F0', '#EF4444', '#F59E0B', '#22C55E']
+const PIE_COLORS = [
+  'var(--tf-primary)',
+  'var(--tf-warning)',
+  'var(--tf-success)',
+  'var(--tf-error)',
+]
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState('30d')
@@ -198,6 +161,7 @@ export default function AnalyticsPage() {
   })
 
   const chartData = overview?.chartData || []
+  const hasChartData = chartData.some((d) => d.views > 0 || d.likes > 0)
 
   const pieData = platformData
     ? [
@@ -207,212 +171,183 @@ export default function AnalyticsPage() {
     : []
 
   const METRIC_CARDS = [
-    {
-      icon: Eye,
-      label: 'Total Views',
-      value: overview?.totals?.views,
-      change: undefined,
-      color: 'text-[#2874F0]',
-      bg: 'bg-[#2874F0]/10',
-    },
-    {
-      icon: ThumbsUp,
-      label: 'Total Likes',
-      value: overview?.totals?.likes,
-      change: undefined,
-      color: 'text-[#22C55E]',
-      bg: 'bg-[#22C55E]/10',
-    },
-    {
-      icon: MessageSquare,
-      label: 'Comments',
-      value: overview?.totals?.comments,
-      change: undefined,
-      color: 'text-[#F59E0B]',
-      bg: 'bg-[#F59E0B]/10',
-    },
-    {
-      icon: Share2,
-      label: 'Shares',
-      value: overview?.totals?.shares,
-      change: undefined,
-      color: 'text-[#FB641B]',
-      bg: 'bg-[#FB641B]/10',
-    },
+    { icon: Eye, label: 'Total Views', value: overview?.totals?.views },
+    { icon: ThumbsUp, label: 'Total Likes', value: overview?.totals?.likes },
+    { icon: MessageSquare, label: 'Comments', value: overview?.totals?.comments },
+    { icon: Share2, label: 'Shares', value: overview?.totals?.shares },
     {
       icon: TrendingUp,
       label: 'Engagement Rate',
       value: overview?.totals?.engagementRate,
-      change: undefined,
-      color: 'text-[#EF4444]',
-      bg: 'bg-[#EF4444]/10',
-      isPercent: true,
+      context: 'likes + comments + shares',
     },
     {
       icon: Clock,
-      label: 'Watch Time (min)',
+      label: 'Watch Time',
       value: overview?.totals?.watchTimeMinutes,
-      change: undefined,
-      color: 'text-[#878787]',
-      bg: 'bg-[#F8F9FA]',
+      context: 'minutes',
     },
   ]
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.06 },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 16 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
-  }
-
   return (
-    <div className="p-5 lg:p-7 max-w-[1400px] mx-auto">
-      <PageTitle title="Analytics" />
-
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="flex flex-col gap-6"
-      >
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <div>
-            <h1 className="text-[26px] font-extrabold text-[#212121] tracking-tight">
-              Analytics
-            </h1>
-            <p className="text-[#878787] text-sm mt-1">
-              Track your content performance across all platforms.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1 bg-[#F8F9FA] rounded-xl p-1">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-xs font-semibold transition-all',
-                  period === p.value
-                    ? 'bg-white text-[#212121] shadow-sm'
-                    : 'text-[#878787] hover:text-[#212121]'
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {METRIC_CARDS.map((card) => (
-              <MetricCard
-                key={card.label}
-                {...card}
-                isLoading={isLoadingOverview}
-              />
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <div className="bg-white rounded-2xl border border-[#E0E0E0] p-5">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-[15px] font-bold text-[#212121]">Views Over Time</h2>
-                <p className="text-xs text-[#878787] mt-0.5">Daily view counts</p>
-              </div>
+    <div className="mx-auto max-w-[1400px] p-4 sm:p-5 lg:p-7">
+      <div className="flex flex-col gap-5 lg:gap-6">
+        <PageHeader
+          title="Analytics"
+          description="Track your content performance across all platforms."
+          actions={
+            <div
+              role="group"
+              aria-label="Date range"
+              className="bg-surface-muted flex items-center gap-0.5 rounded-lg p-0.5"
+            >
+              {PERIODS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setPeriod(p.value)}
+                  className={cn(
+                    'rounded-md px-3 py-1.5 text-xs font-semibold transition-all duration-150',
+                    'focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:outline-none',
+                    period === p.value
+                      ? 'bg-surface text-foreground shadow-sm'
+                      : 'text-foreground-muted hover:text-foreground'
+                  )}
+                  aria-pressed={period === p.value}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
+          }
+        />
 
-            <div className="h-[240px]">
-              {isLoadingOverview ? (
-                <div className="h-full skeleton rounded-xl" />
-              ) : chartData.length === 0 ? (
-                <div className="h-full flex items-center justify-center">
-                  <p className="text-sm text-[#878787]">
-                    No view data available for this period.
+        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          {METRIC_CARDS.map((card) => (
+            <MetricCard
+              key={card.label}
+              label={card.label}
+              icon={card.icon}
+              value={card.value}
+              context={card.context}
+              isLoading={isLoadingOverview}
+            />
+          ))}
+        </div>
+
+        <ChartCard
+          title="Views Over Time"
+          description="Daily views and likes"
+          isLoading={isLoadingOverview}
+          loadingHeight={260}
+        >
+          <div className="h-[260px] w-full">
+            {!hasChartData ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3">
+                <div className="bg-surface-muted flex h-12 w-12 items-center justify-center rounded-2xl">
+                  <BarChart3
+                    className="text-foreground-faint h-5 w-5"
+                    aria-hidden="true"
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-foreground text-sm font-bold">
+                    No view data for this period
+                  </p>
+                  <p className="text-foreground-muted mt-0.5 text-xs">
+                    Publish content to start tracking daily performance.
                   </p>
                 </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={chartData}
-                    margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2874F0" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#2874F0" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="likesGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22C55E" stopOpacity={0.12} />
-                        <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="5%"
+                        stopColor="var(--tf-primary)"
+                        stopOpacity={0.18}
+                      />
+                      <stop offset="95%" stopColor="var(--tf-primary)" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="likesGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="5%"
+                        stopColor="var(--tf-success)"
+                        stopOpacity={0.14}
+                      />
+                      <stop offset="95%" stopColor="var(--tf-success)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
 
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--color-border)"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontFamily: 'Manrope' }}
-                      tickLine={false}
-                      axisLine={false}
-                      interval={Math.floor(chartData.length / 6)}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: 'var(--color-text-secondary)', fontFamily: 'Manrope' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={formatNumber}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="views"
-                      name="Views"
-                      stroke="#2874F0"
-                      strokeWidth={2.5}
-                      fill="url(#viewsGrad)"
-                      dot={false}
-                      activeDot={{ r: 4, fill: '#2874F0', strokeWidth: 0 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="likes"
-                      name="Likes"
-                      stroke="#22C55E"
-                      strokeWidth={2}
-                      fill="url(#likesGrad)"
-                      dot={false}
-                      activeDot={{ r: 3, fill: '#22C55E', strokeWidth: 0 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--tf-border)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="date"
+                    tick={{
+                      fontSize: 11,
+                      fill: 'var(--tf-foreground-muted)',
+                      fontFamily: 'Manrope',
+                    }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={Math.max(Math.floor(chartData.length / 6), 0)}
+                  />
+                  <YAxis
+                    tick={{
+                      fontSize: 11,
+                      fill: 'var(--tf-foreground-muted)',
+                      fontFamily: 'Manrope',
+                    }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={48}
+                    tickFormatter={formatNumber}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip />}
+                    cursor={{ stroke: 'var(--tf-border)' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="views"
+                    name="Views"
+                    stroke="var(--tf-primary)"
+                    strokeWidth={2.5}
+                    fill="url(#viewsGrad)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: 'var(--tf-primary)', strokeWidth: 0 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="likes"
+                    name="Likes"
+                    stroke="var(--tf-success)"
+                    strokeWidth={2}
+                    fill="url(#likesGrad)"
+                    dot={false}
+                    activeDot={{ r: 3, fill: 'var(--tf-success)', strokeWidth: 0 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        </motion.div>
+        </ChartCard>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div variants={itemVariants} className="lg:col-span-2">
-            <div className="bg-white rounded-2xl border border-[#E0E0E0]">
-              <div className="px-5 py-4 border-b border-[#E0E0E0]">
-                <h2 className="text-[15px] font-bold text-[#212121]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
+          <div className="lg:col-span-2">
+            <div className="border-border bg-surface shadow-card h-full rounded-2xl border">
+              <div className="border-border-subtle border-b px-5 py-4">
+                <h2 className="text-foreground text-[15px] font-bold">
                   Top Performing Content
                 </h2>
-                <p className="text-xs text-[#878787] mt-0.5">
+                <p className="text-foreground-muted mt-0.5 text-xs">
                   Your best published content
                 </p>
               </div>
@@ -420,21 +355,27 @@ export default function AnalyticsPage() {
               <div className="p-2">
                 {isLoadingTop ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4">
+                    <div key={i} className="flex items-center gap-4 p-3">
                       <div className="skeleton h-4 w-4 rounded" />
                       <div className="skeleton h-8 w-8 rounded-lg" />
-                      <div className="flex-1 flex flex-col gap-2">
+                      <div className="flex flex-1 flex-col gap-2">
                         <div className="skeleton h-3.5 w-40 rounded" />
                         <div className="skeleton h-3 w-24 rounded" />
                       </div>
                     </div>
                   ))
                 ) : topContent.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <p className="text-sm text-[#878787]">
-                      No published content yet.
-                    </p>
-                  </div>
+                  <EmptyState
+                    compact
+                    icon={BarChart3}
+                    title="No published content yet"
+                    description="Once you publish your first clip, your top performers will appear here."
+                    action={{
+                      label: 'Upload a video',
+                      onClick: () =>
+                        window.dispatchEvent(new CustomEvent('talishflow:open-upload')),
+                    }}
+                  />
                 ) : (
                   topContent.map((item, index) => (
                     <TopContentCard key={item.jobId} item={item} index={index} />
@@ -442,27 +383,38 @@ export default function AnalyticsPage() {
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div variants={itemVariants}>
-            <div className="bg-white rounded-2xl border border-[#E0E0E0] h-full">
-              <div className="px-5 py-4 border-b border-[#E0E0E0]">
-                <h2 className="text-[15px] font-bold text-[#212121]">
+          <div>
+            <div className="border-border bg-surface shadow-card h-full rounded-2xl border">
+              <div className="border-border-subtle border-b px-5 py-4">
+                <h2 className="text-foreground text-[15px] font-bold">
                   Platform Distribution
                 </h2>
-                <p className="text-xs text-[#878787] mt-0.5">
+                <p className="text-foreground-muted mt-0.5 text-xs">
                   Published content by platform
                 </p>
               </div>
 
-              <div className="p-5 flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-4 p-5">
                 {isLoadingPlatform ? (
-                  <div className="w-40 h-40 rounded-full skeleton" />
+                  <div className="skeleton h-40 w-40 rounded-full" />
                 ) : pieData.every((d) => d.value === 0) ? (
-                  <div className="py-8 text-center">
-                    <p className="text-sm text-[#878787]">
-                      No published content yet.
-                    </p>
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <div className="bg-surface-muted flex h-12 w-12 items-center justify-center rounded-2xl">
+                      <PieChartIcon
+                        className="text-foreground-faint h-5 w-5"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-foreground text-sm font-bold">
+                        Nothing published yet
+                      </p>
+                      <p className="text-foreground-muted mt-0.5 text-xs">
+                        Platform split appears once you publish.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={200}>
@@ -475,6 +427,7 @@ export default function AnalyticsPage() {
                         outerRadius={85}
                         paddingAngle={3}
                         dataKey="value"
+                        stroke="var(--tf-surface)"
                       >
                         {pieData.map((_, index) => (
                           <Cell
@@ -483,14 +436,12 @@ export default function AnalyticsPage() {
                           />
                         ))}
                       </Pie>
-                      <Tooltip
-                        formatter={(value) => [formatNumber(value), 'Posts']}
-                      />
+                      <Tooltip formatter={(value) => [formatNumber(value), 'Posts']} />
                       <Legend
                         iconType="circle"
                         iconSize={8}
                         formatter={(value) => (
-                          <span className="text-xs text-[#878787] font-medium">
+                          <span className="text-foreground-muted text-xs font-medium">
                             {value}
                           </span>
                         )}
@@ -500,20 +451,20 @@ export default function AnalyticsPage() {
                 )}
 
                 {platformData && (
-                  <div className="w-full flex flex-col gap-3">
+                  <div className="flex w-full flex-col gap-3">
                     {[
                       {
                         platform: 'YouTube',
                         icon: Youtube,
-                        color: 'text-[#EF4444]',
-                        bg: 'bg-[#EF4444]/10',
+                        color: 'text-error',
+                        bg: 'bg-error-light',
                         value: platformData.youtube?.published || 0,
                       },
                       {
                         platform: 'Instagram',
                         icon: Instagram,
-                        color: 'text-[#F59E0B]',
-                        bg: 'bg-[#F59E0B]/10',
+                        color: 'text-warning',
+                        bg: 'bg-warning-light',
                         value: platformData.instagram?.published || 0,
                       },
                     ].map((item) => (
@@ -524,17 +475,20 @@ export default function AnalyticsPage() {
                         <div className="flex items-center gap-2.5">
                           <div
                             className={cn(
-                              'w-7 h-7 rounded-lg flex items-center justify-center',
+                              'flex h-7 w-7 items-center justify-center rounded-lg',
                               item.bg
                             )}
                           >
-                            <item.icon className={cn('w-3.5 h-3.5', item.color)} />
+                            <item.icon
+                              className={cn('h-3.5 w-3.5', item.color)}
+                              aria-hidden="true"
+                            />
                           </div>
-                          <span className="text-sm font-semibold text-[#212121]">
+                          <span className="text-foreground text-sm font-semibold">
                             {item.platform}
                           </span>
                         </div>
-                        <span className="text-sm font-bold text-[#212121]">
+                        <span className="text-foreground text-sm font-bold">
                           {item.value} posts
                         </span>
                       </div>
@@ -543,9 +497,9 @@ export default function AnalyticsPage() {
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

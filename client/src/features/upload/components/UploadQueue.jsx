@@ -7,16 +7,16 @@ export default function UploadQueue({ uploads, onCancel, onRemove, onClear }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-[#212121]">Upload Queue</p>
+        <p className="text-foreground text-sm font-bold">Upload Queue</p>
         <button
           onClick={onClear}
-          className="text-xs font-semibold text-[#878787] hover:text-[#2874F0] transition-colors"
+          className="text-foreground-muted hover:text-primary text-xs font-semibold transition-colors"
         >
           Clear completed
         </button>
       </div>
 
-      <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto no-scrollbar">
+      <div className="no-scrollbar flex max-h-[260px] flex-col gap-2 overflow-y-auto">
         <AnimatePresence initial={false}>
           {uploads.map((upload) => (
             <UploadProgress

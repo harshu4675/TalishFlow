@@ -1,79 +1,76 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { User, Link2, Bell, Shield } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import ProfileSettings from '../components/ProfileSettings'
 import ConnectedAccounts from '../components/ConnectedAccounts'
 import SecuritySettings from '../components/SecuritySettings'
 import NotificationSettings from '../components/NotificationSettings'
-import PageTitle from '@/components/common/PageTitle'
+import PageHeader from '@/components/common/PageHeader'
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User, component: ProfileSettings },
-  { id: 'accounts', label: 'Connected Accounts', icon: Link2, component: ConnectedAccounts },
-  { id: 'notifications', label: 'Notifications', icon: Bell, component: NotificationSettings },
+  {
+    id: 'accounts',
+    label: 'Connected Accounts',
+    icon: Link2,
+    component: ConnectedAccounts,
+  },
+  {
+    id: 'notifications',
+    label: 'Notifications',
+    icon: Bell,
+    component: NotificationSettings,
+  },
   { id: 'security', label: 'Security', icon: Shield, component: SecuritySettings },
 ]
 
 export default function SettingsPage({ tab: defaultTab }) {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const getActiveTab = () => {
-    if (defaultTab) return defaultTab
-    return searchParams.get('tab') || 'profile'
-  }
-
-  const [activeTab, setActiveTab] = useState(getActiveTab)
+  const [activeTab, setActiveTab] = useState(
+    () => defaultTab || searchParams.get('tab') || 'profile'
+  )
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId)
-    setSearchParams({ tab: tabId })
+    setSearchParams({ tab: tabId }, { replace: true })
   }
 
   const ActiveComponent =
     TABS.find((t) => t.id === activeTab)?.component || ProfileSettings
 
   return (
-    <div className="p-5 lg:p-7 max-w-[1200px] mx-auto">
-      <PageTitle title="Settings" />
+    <div className="mx-auto max-w-[1200px] p-4 sm:p-5 lg:p-7">
+      <div className="flex flex-col gap-5">
+        <PageHeader
+          title="Settings"
+          description="Manage your account, connected platforms, and preferences."
+        />
 
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-[26px] font-extrabold text-[#212121] tracking-tight">
-            Settings
-          </h1>
-          <p className="text-[#878787] text-sm mt-1">
-            Manage your account and preferences.
-          </p>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="lg:w-[220px] xl:w-[240px] flex-shrink-0">
+        <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
+          <div className="lg:w-[220px] lg:flex-shrink-0">
             <nav
-              className="flex lg:flex-col gap-1 overflow-x-auto no-scrollbar"
+              className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 lg:flex-col lg:overflow-visible"
               aria-label="Settings sections"
             >
               {TABS.map((tab) => {
                 const isActive = activeTab === tab.id
+                const Icon = tab.icon
                 return (
                   <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
                     className={cn(
-                      'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-left',
-                      'transition-all duration-150 flex-shrink-0',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                      'flex flex-shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-150',
+                      'focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:outline-none',
                       isActive
-                        ? 'bg-[#2874F0] text-white shadow-md shadow-primary/25'
-                        : 'text-[#878787] hover:text-[#212121] hover:bg-[#F8F9FA]'
+                        ? 'bg-primary shadow-primary/25 text-white shadow-sm'
+                        : 'text-foreground-muted hover:bg-surface-muted hover:text-foreground'
                     )}
                     aria-current={isActive ? 'page' : undefined}
                   >
-                    <tab.icon
-                      className="w-4 h-4 flex-shrink-0"
-                      aria-hidden="true"
-                    />
+                    <Icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                     <span className="truncate">{tab.label}</span>
                   </button>
                 )
@@ -81,16 +78,13 @@ export default function SettingsPage({ tab: defaultTab }) {
             </nav>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <motion.div
+          <div className="min-w-0 flex-1">
+            <div
               key={activeTab}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white rounded-2xl border border-[#E0E0E0]"
+              className="animate-fade-in border-border bg-surface shadow-card overflow-hidden rounded-2xl border"
             >
               <ActiveComponent />
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>

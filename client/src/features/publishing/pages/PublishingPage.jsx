@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Radio,
   Youtube,
@@ -13,178 +12,139 @@ import {
   X,
   ExternalLink,
   Calendar,
+  Send,
 } from 'lucide-react'
 import publishingService from '@/services/publishingService'
 import { useNotificationContext } from '@/context/NotificationContext'
-import PageTitle from '@/components/common/PageTitle'
+import PageHeader from '@/components/common/PageHeader'
 import EmptyState from '@/components/common/EmptyState'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/utils/cn'
-import { formatRelativeTime, formatDateTime, truncate } from '@/utils/formatters'
+import { formatRelativeTime, formatDateTime } from '@/utils/formatters'
+
+const FILTER_TABS = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Scheduled' },
+  { id: 'publishing', label: 'Publishing' },
+  { id: 'published', label: 'Published' },
+  { id: 'failed', label: 'Failed' },
+]
 
 const STATUS_CONFIG = {
-  pending: {
-    label: 'Scheduled',
-    icon: Calendar,
-    color: 'text-[#2874F0]',
-    bg: 'bg-[#2874F0]/10',
-  },
-  queued: {
-    label: 'In Queue',
-    icon: Clock,
-    color: 'text-[#F59E0B]',
-    bg: 'bg-[#F59E0B]/10',
-  },
-  publishing: {
-    label: 'Publishing',
-    icon: Loader2,
-    color: 'text-[#2874F0]',
-    bg: 'bg-[#2874F0]/10',
-    spin: true,
-  },
-  published: {
-    label: 'Published',
-    icon: CheckCircle2,
-    color: 'text-[#22C55E]',
-    bg: 'bg-[#22C55E]/10',
-  },
-  failed: {
-    label: 'Failed',
-    icon: AlertCircle,
-    color: 'text-[#EF4444]',
-    bg: 'bg-[#EF4444]/10',
-  },
-  cancelled: {
-    label: 'Cancelled',
-    icon: X,
-    color: 'text-[#878787]',
-    bg: 'bg-[#F8F9FA]',
-  },
+  pending: { label: 'Scheduled', icon: Calendar, tone: 'primary' },
+  queued: { label: 'In Queue', icon: Clock, tone: 'warning' },
+  publishing: { label: 'Publishing', icon: Loader2, tone: 'primary', spin: true },
+  published: { label: 'Published', icon: CheckCircle2, tone: 'success' },
+  failed: { label: 'Failed', icon: AlertCircle, tone: 'error' },
+  cancelled: { label: 'Cancelled', icon: X, tone: 'neutral' },
 }
 
 const PLATFORM_CONFIG = {
-  youtube: {
-    label: 'YouTube',
-    icon: Youtube,
-    color: 'text-[#EF4444]',
-    bg: 'bg-[#EF4444]/10',
-  },
-  instagram: {
-    label: 'Instagram',
-    icon: Instagram,
-    color: 'text-[#F59E0B]',
-    bg: 'bg-[#F59E0B]/10',
-  },
+  youtube: { label: 'YouTube', icon: Youtube },
+  instagram: { label: 'Instagram', icon: Instagram },
 }
 
-function JobRow({ job, onCancel, onRetry }) {
+const TONE_MAP = {
+  primary: 'primary',
+  warning: 'warning',
+  success: 'success',
+  error: 'error',
+  neutral: 'neutral',
+}
+
+const JobRow = memo(function JobRow({ job, onCancel, onRetry }) {
   const status = STATUS_CONFIG[job.status] || STATUS_CONFIG.pending
   const platform = PLATFORM_CONFIG[job.platform]
   const StatusIcon = status.icon
   const PlatformIcon = platform?.icon
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-[#E0E0E0] hover:shadow-card transition-all"
-    >
-      <div
-        className={cn(
-          'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-          platform?.bg || 'bg-[#F8F9FA]'
-        )}
-      >
-        {PlatformIcon && (
-          <PlatformIcon
-            className={cn('w-4.5 h-4.5', platform?.color || 'text-[#878787]')}
-          />
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-[#212121] truncate">
-          {job.title || job.clipId?.title || 'Untitled'}
-        </p>
-        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          <span className="text-xs text-[#878787]">{platform?.label}</span>
-          <span className="text-border" aria-hidden="true">·</span>
-          {job.scheduledAt ? (
-            <span className="text-xs text-[#878787]">
-              {formatDateTime(job.scheduledAt)}
-            </span>
-          ) : (
-            <span className="text-xs text-[#878787]">
-              {formatRelativeTime(job.createdAt)}
-            </span>
+    <div className="border-border bg-surface shadow-card hover:border-primary/25 hover:shadow-float flex flex-col gap-3 rounded-2xl border p-4 transition-all duration-150 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex items-center gap-3 sm:min-w-0 sm:flex-1">
+        <div className="bg-surface-muted flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl">
+          {PlatformIcon && (
+            <PlatformIcon
+              className="text-foreground-muted h-4.5 w-4.5"
+              aria-hidden="true"
+            />
           )}
         </div>
 
-        {job.errorMessage && (
-          <p className="text-xs text-[#EF4444] mt-1 truncate">{job.errorMessage}</p>
-        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-foreground truncate text-sm font-bold">
+            {job.title || job.clipId?.title || 'Untitled'}
+          </p>
+          <div className="text-foreground-muted mt-0.5 flex items-center gap-1.5 text-xs">
+            <span>{platform?.label}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {job.scheduledAt
+                ? formatDateTime(job.scheduledAt)
+                : formatRelativeTime(job.createdAt)}
+            </span>
+          </div>
+          {job.errorMessage && (
+            <p className="text-error mt-1 truncate text-xs">{job.errorMessage}</p>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold',
-            status.color,
-            status.bg
-          )}
-        >
+      <div className="flex flex-shrink-0 items-center justify-between gap-2 sm:justify-end">
+        <Badge variant={TONE_MAP[status.tone]}>
           <StatusIcon
-            className={cn('w-3 h-3', status.spin && 'animate-spin')}
+            className={cn('h-3 w-3', status.spin && 'animate-spin')}
+            aria-hidden="true"
           />
           {status.label}
-        </span>
+        </Badge>
 
         {job.platformVideoUrl && (
           <a
             href={job.platformVideoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1.5 rounded-lg text-[#878787] hover:text-[#2874F0] hover:bg-[#2874F0]/10 transition-all"
+            className="text-foreground-muted hover:bg-surface-muted hover:text-primary rounded-lg p-1.5 transition-colors"
             aria-label="View on platform"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
         )}
 
         {['pending', 'queued'].includes(job.status) && (
           <button
             onClick={() => onCancel(job._id)}
-            className="p-1.5 rounded-lg text-[#878787] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-all"
+            className="text-foreground-muted hover:bg-error-light hover:text-error rounded-lg p-1.5 transition-colors"
             aria-label="Cancel job"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         )}
 
         {job.status === 'failed' && (
           <button
             onClick={() => onRetry(job._id)}
-            className="p-1.5 rounded-lg text-[#878787] hover:text-[#2874F0] hover:bg-[#2874F0]/10 transition-all"
+            className="text-foreground-muted hover:bg-surface-muted hover:text-primary rounded-lg p-1.5 transition-colors"
             aria-label="Retry job"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         )}
       </div>
-    </motion.div>
+    </div>
   )
-}
+})
+JobRow.displayName = 'JobRow'
 
 function JobRowSkeleton() {
   return (
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-[#E0E0E0]">
-      <div className="w-10 h-10 rounded-xl skeleton flex-shrink-0" />
-      <div className="flex-1 flex flex-col gap-2">
-        <div className="h-4 w-48 skeleton rounded-lg" />
-        <div className="h-3 w-32 skeleton rounded-lg" />
+    <div className="border-border bg-surface shadow-card flex items-center gap-4 rounded-2xl border p-4">
+      <div className="skeleton h-10 w-10 flex-shrink-0 rounded-xl" />
+      <div className="flex flex-1 flex-col gap-2">
+        <div className="skeleton h-4 w-48 rounded-lg" />
+        <div className="skeleton mt-2 h-3 w-32 rounded-lg" />
       </div>
-      <div className="h-6 w-20 skeleton rounded-full" />
+      <div className="skeleton h-6 w-20 rounded-full" />
     </div>
   )
 }
@@ -194,7 +154,7 @@ export default function PublishingPage() {
   const { success, error } = useNotificationContext()
   const [filter, setFilter] = useState('all')
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['publishing', 'jobs', filter],
     queryFn: () =>
       publishingService.listJobs({
@@ -230,46 +190,42 @@ export default function PublishingPage() {
   const jobs = data?.jobs || []
   const total = data?.pagination?.total || 0
 
-  const FILTER_TABS = [
-    { id: 'all', label: 'All', count: null },
-    { id: 'pending', label: 'Scheduled', count: null },
-    { id: 'publishing', label: 'Publishing', count: null },
-    { id: 'published', label: 'Published', count: null },
-    { id: 'failed', label: 'Failed', count: null },
-  ]
-
   return (
-    <div className="p-5 lg:p-7 max-w-[1200px] mx-auto">
-      <PageTitle title="Publishing" />
+    <div className="mx-auto max-w-[1200px] p-4 sm:p-5 lg:p-7">
+      <div className="flex flex-col gap-5">
+        <PageHeader
+          title="Publishing"
+          description="Manage all your YouTube and Instagram publications."
+          actions={
+            <Button
+              variant="secondary"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('talishflow:open-upload'))
+              }
+            >
+              <Send className="h-4 w-4" aria-hidden="true" />
+              New upload
+            </Button>
+          }
+        />
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="flex flex-col gap-6"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-[26px] font-extrabold text-[#212121] tracking-tight">
-              Publishing
-            </h1>
-            <p className="text-[#878787] text-sm mt-1">
-              Manage all your YouTube and Instagram publications.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1 bg-[#F8F9FA] rounded-xl p-1 w-fit">
+        <div
+          role="group"
+          aria-label="Filter publishing jobs"
+          className="no-scrollbar bg-surface-muted flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded-xl p-1"
+        >
           {FILTER_TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={cn(
-                'px-3 py-2 rounded-lg text-xs font-semibold transition-all',
+                'rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-150',
+                'focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:outline-none',
                 filter === tab.id
-                  ? 'bg-white text-[#212121] shadow-sm'
-                  : 'text-[#878787] hover:text-[#212121]'
+                  ? 'bg-surface text-foreground shadow-sm'
+                  : 'text-foreground-muted hover:text-foreground'
               )}
+              aria-pressed={filter === tab.id}
             >
               {tab.label}
             </button>
@@ -279,38 +235,64 @@ export default function PublishingPage() {
         <div className="flex flex-col gap-3">
           {isLoading ? (
             Array.from({ length: 4 }).map((_, i) => <JobRowSkeleton key={i} />)
+          ) : isError ? (
+            <div className="border-border bg-surface flex flex-col items-center gap-3 rounded-2xl border px-6 py-12 text-center">
+              <div className="bg-error-light flex h-12 w-12 items-center justify-center rounded-2xl">
+                <AlertCircle className="text-error h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-foreground text-sm font-bold">
+                  Could not load publishing jobs
+                </p>
+                <p className="text-foreground-muted mt-0.5 text-xs">
+                  Something went wrong while fetching your jobs.
+                </p>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => refetch()}>
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                Try again
+              </Button>
+            </div>
           ) : jobs.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-[#E0E0E0]">
+            <div className="border-border bg-surface rounded-2xl border">
               <EmptyState
                 icon={Radio}
                 title="No publishing jobs"
                 description={
                   filter === 'all'
-                    ? 'You have not published any content yet. Open a clip in the editor to publish.'
+                    ? 'Your published videos will appear here once you publish your first clip.'
                     : `No ${filter} jobs found.`
+                }
+                action={
+                  filter === 'all'
+                    ? {
+                        label: 'Open the editor',
+                        onClick: () => {
+                          window.dispatchEvent(new CustomEvent('talishflow:open-upload'))
+                        },
+                      }
+                    : undefined
                 }
               />
             </div>
           ) : (
-            <AnimatePresence mode="popLayout">
-              {jobs.map((job) => (
-                <JobRow
-                  key={job._id}
-                  job={job}
-                  onCancel={(id) => cancelMutation.mutate(id)}
-                  onRetry={(id) => retryMutation.mutate(id)}
-                />
-              ))}
-            </AnimatePresence>
+            jobs.map((job) => (
+              <JobRow
+                key={job._id}
+                job={job}
+                onCancel={(id) => cancelMutation.mutate(id)}
+                onRetry={(id) => retryMutation.mutate(id)}
+              />
+            ))
           )}
         </div>
 
         {total > 0 && (
-          <p className="text-xs text-[#878787] text-center">
+          <p className="text-foreground-faint text-center text-xs">
             Showing {jobs.length} of {total} jobs
           </p>
         )}
-      </motion.div>
+      </div>
     </div>
   )
 }

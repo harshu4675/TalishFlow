@@ -1,10 +1,16 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { Scissors, Divide, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { formatDuration } from '@/utils/formatters'
 
-function WaveformCanvas({ waveformData, duration, currentTime, trimStart, trimEnd, onSeek }) {
+function WaveformCanvas({
+  waveformData,
+  duration,
+  currentTime,
+  trimStart,
+  trimEnd,
+  onSeek,
+}) {
   const canvasRef = useRef(null)
 
   useEffect(() => {
@@ -37,7 +43,7 @@ function WaveformCanvas({ waveformData, duration, currentTime, trimStart, trimEn
 
       const isInTrim = x >= trimStartX && x <= trimEndX
 
-      ctx.fillStyle = isInTrim ? '#2874F0' : 'rgba(15, 110, 124, 0.3)'
+      ctx.fillStyle = isInTrim ? 'var(--tf-primary)' : 'rgba(15, 110, 124, 0.3)'
       ctx.fillRect(x, y, Math.max(1, barWidth - 0.5), barHeight)
     })
 
@@ -47,7 +53,7 @@ function WaveformCanvas({ waveformData, duration, currentTime, trimStart, trimEn
       ctx.fillRect(playheadX - 1, 0, 2, height)
     }
 
-    ctx.strokeStyle = '#2874F0'
+    ctx.strokeStyle = 'var(--tf-primary)'
     ctx.lineWidth = 2
 
     if (trimStartX > 0) {
@@ -68,14 +74,17 @@ function WaveformCanvas({ waveformData, duration, currentTime, trimStart, trimEn
     ctx.setLineDash([])
   }, [waveformData, duration, currentTime, trimStart, trimEnd])
 
-  const handleClick = useCallback((event) => {
-    const canvas = canvasRef.current
-    if (!canvas || !duration) return
-    const rect = canvas.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const time = (x / canvas.width) * duration
-    onSeek?.(Math.max(0, Math.min(time, duration)))
-  }, [duration, onSeek])
+  const handleClick = useCallback(
+    (event) => {
+      const canvas = canvasRef.current
+      if (!canvas || !duration) return
+      const rect = canvas.getBoundingClientRect()
+      const x = event.clientX - rect.left
+      const time = (x / canvas.width) * duration
+      onSeek?.(Math.max(0, Math.min(time, duration)))
+    },
+    [duration, onSeek]
+  )
 
   return (
     <canvas
@@ -83,7 +92,7 @@ function WaveformCanvas({ waveformData, duration, currentTime, trimStart, trimEn
       width={800}
       height={80}
       onClick={handleClick}
-      className="w-full h-20 rounded-xl cursor-crosshair"
+      className="h-20 w-full cursor-crosshair rounded-xl"
       aria-label="Waveform timeline"
     />
   )
@@ -95,36 +104,39 @@ function TrimHandle({ position, onDrag, side, duration }) {
   const startX = useRef(0)
   const startValue = useRef(0)
 
-  const handleMouseDown = useCallback((event) => {
-    event.preventDefault()
-    isDragging.current = true
-    startX.current = event.clientX
-    startValue.current = position
+  const handleMouseDown = useCallback(
+    (event) => {
+      event.preventDefault()
+      isDragging.current = true
+      startX.current = event.clientX
+      startValue.current = position
 
-    const handleMouseMove = (moveEvent) => {
-      if (!isDragging.current) return
+      const handleMouseMove = (moveEvent) => {
+        if (!isDragging.current) return
 
-      const deltaX = moveEvent.clientX - startX.current
-      const parent = handleRef.current?.closest('[data-timeline]')
+        const deltaX = moveEvent.clientX - startX.current
+        const parent = handleRef.current?.closest('[data-timeline]')
 
-      if (!parent) return
+        if (!parent) return
 
-      const { width } = parent.getBoundingClientRect()
-      const deltaTime = (deltaX / width) * duration
-      const newTime = Math.max(0, Math.min(startValue.current + deltaTime, duration))
+        const { width } = parent.getBoundingClientRect()
+        const deltaTime = (deltaX / width) * duration
+        const newTime = Math.max(0, Math.min(startValue.current + deltaTime, duration))
 
-      onDrag(newTime)
-    }
+        onDrag(newTime)
+      }
 
-    const handleMouseUp = () => {
-      isDragging.current = false
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
+      const handleMouseUp = () => {
+        isDragging.current = false
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [position, duration, onDrag])
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    },
+    [position, duration, onDrag]
+  )
 
   const percentage = duration > 0 ? (position / duration) * 100 : 0
 
@@ -132,7 +144,7 @@ function TrimHandle({ position, onDrag, side, duration }) {
     <div
       ref={handleRef}
       className={cn(
-        'absolute top-0 h-full w-5 cursor-ew-resize z-10 flex items-center justify-center',
+        'absolute top-0 z-10 flex h-full w-5 cursor-ew-resize items-center justify-center',
         'group touch-none select-none'
       )}
       style={{ left: `calc(${percentage}% - 10px)` }}
@@ -141,12 +153,14 @@ function TrimHandle({ position, onDrag, side, duration }) {
       aria-label={`${side} trim handle`}
       aria-valuenow={Math.round(position)}
     >
-      <div className={cn(
-        'w-1.5 h-12 rounded-full bg-[#2874F0] shadow-lg',
-        'group-hover:bg-[#FB641B] transition-colors',
-        'group-hover:scale-110 transition-transform'
-      )}>
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-white bg-[#2874F0] rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+      <div
+        className={cn(
+          'bg-primary h-12 w-1.5 rounded-full shadow-lg',
+          'group-hover:bg-accent transition-colors',
+          'transition-transform group-hover:scale-110'
+        )}
+      >
+        <div className="bg-primary absolute -top-6 left-1/2 -translate-x-1/2 rounded px-1.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-white opacity-0 transition-opacity group-hover:opacity-100">
           {formatDuration(position)}
         </div>
       </div>
@@ -159,11 +173,11 @@ function SplitMarker({ splitTime, duration }) {
 
   return (
     <div
-      className="absolute top-0 h-full flex flex-col items-center pointer-events-none"
+      className="pointer-events-none absolute top-0 flex h-full flex-col items-center"
       style={{ left: `${percentage}%` }}
     >
-      <div className="w-0.5 h-full bg-[#F59E0B]/80" />
-      <div className="absolute -top-2 text-[10px] font-bold text-[#F59E0B] bg-[#F59E0B]/20 rounded px-1 whitespace-nowrap">
+      <div className="bg-warning/80 h-full w-0.5" />
+      <div className="text-warning bg-warning/20 absolute -top-2 rounded px-1 text-[10px] font-bold whitespace-nowrap">
         Split: {formatDuration(splitTime)}
       </div>
     </div>
@@ -193,17 +207,26 @@ export default function TimelineEditor({
     setSplitTime(duration / 2)
   }, [clip?._id, duration])
 
-  const handleTrimStartDrag = useCallback((time) => {
-    setTrimStart(Math.min(time, trimEnd - 3))
-  }, [trimEnd])
+  const handleTrimStartDrag = useCallback(
+    (time) => {
+      setTrimStart(Math.min(time, trimEnd - 3))
+    },
+    [trimEnd]
+  )
 
-  const handleTrimEndDrag = useCallback((time) => {
-    setTrimEnd(Math.max(time, trimStart + 3))
-  }, [trimStart])
+  const handleTrimEndDrag = useCallback(
+    (time) => {
+      setTrimEnd(Math.max(time, trimStart + 3))
+    },
+    [trimStart]
+  )
 
-  const handleSplitDrag = useCallback((time) => {
-    setSplitTime(Math.max(3, Math.min(time, duration - 3)))
-  }, [duration])
+  const handleSplitDrag = useCallback(
+    (time) => {
+      setSplitTime(Math.max(3, Math.min(time, duration - 3)))
+    },
+    [duration]
+  )
 
   const handleApplyTrim = () => {
     if (trimStart === 0 && trimEnd === duration) return
@@ -220,29 +243,27 @@ export default function TimelineEditor({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1">
+        <div className="flex items-center gap-1 rounded-xl bg-white/10 p-1">
           <button
             onClick={() => setMode('trim')}
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all',
-              mode === 'trim'
-                ? 'bg-[#2874F0] text-white'
-                : 'text-white/50 hover:text-white'
+              'flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
+              mode === 'trim' ? 'bg-primary text-white' : 'text-white/50 hover:text-white'
             )}
           >
-            <Scissors className="w-3.5 h-3.5" />
+            <Scissors className="h-3.5 w-3.5" />
             Trim
           </button>
           <button
             onClick={() => setMode('split')}
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all',
+              'flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
               mode === 'split'
-                ? 'bg-[#F59E0B] text-white'
+                ? 'bg-warning text-white'
                 : 'text-white/50 hover:text-white'
             )}
           >
-            <Divide className="w-3.5 h-3.5" />
+            <Divide className="h-3.5 w-3.5" />
             Split
           </button>
         </div>
@@ -251,19 +272,19 @@ export default function TimelineEditor({
           <button
             onClick={() => setZoom((z) => Math.max(1, z - 0.5))}
             disabled={zoom <= 1}
-            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30"
+            className="rounded-lg p-1.5 text-white/40 transition-all hover:bg-white/10 hover:text-white disabled:opacity-30"
             aria-label="Zoom out"
           >
-            <ZoomOut className="w-4 h-4" />
+            <ZoomOut className="h-4 w-4" />
           </button>
-          <span className="text-[11px] text-white/40 w-10 text-center">{zoom}x</span>
+          <span className="w-10 text-center text-[11px] text-white/40">{zoom}x</span>
           <button
             onClick={() => setZoom((z) => Math.min(4, z + 0.5))}
             disabled={zoom >= 4}
-            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30"
+            className="rounded-lg p-1.5 text-white/40 transition-all hover:bg-white/10 hover:text-white disabled:opacity-30"
             aria-label="Zoom in"
           >
-            <ZoomIn className="w-4 h-4" />
+            <ZoomIn className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -318,21 +339,23 @@ export default function TimelineEditor({
       </div>
 
       {mode === 'trim' && (
-        <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
           <div className="flex items-center gap-4">
             <div>
-              <p className="text-[10px] text-white/40 uppercase font-bold">Start</p>
+              <p className="text-[10px] font-bold text-white/40 uppercase">Start</p>
               <p className="text-sm font-bold text-white">{formatDuration(trimStart)}</p>
             </div>
-            <div className="w-px h-6 bg-white/20" />
+            <div className="h-6 w-px bg-white/20" />
             <div>
-              <p className="text-[10px] text-white/40 uppercase font-bold">End</p>
+              <p className="text-[10px] font-bold text-white/40 uppercase">End</p>
               <p className="text-sm font-bold text-white">{formatDuration(trimEnd)}</p>
             </div>
-            <div className="w-px h-6 bg-white/20" />
+            <div className="h-6 w-px bg-white/20" />
             <div>
-              <p className="text-[10px] text-white/40 uppercase font-bold">Duration</p>
-              <p className="text-sm font-bold text-[#2874F0]">{formatDuration(trimmedDuration)}</p>
+              <p className="text-[10px] font-bold text-white/40 uppercase">Duration</p>
+              <p className="text-primary text-sm font-bold">
+                {formatDuration(trimmedDuration)}
+              </p>
             </div>
           </div>
 
@@ -343,10 +366,10 @@ export default function TimelineEditor({
                   setTrimStart(0)
                   setTrimEnd(duration)
                 }}
-                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                className="rounded-lg p-1.5 text-white/40 transition-all hover:bg-white/10 hover:text-white"
                 aria-label="Reset trim"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="h-4 w-4" />
               </button>
             )}
 
@@ -354,12 +377,12 @@ export default function TimelineEditor({
               onClick={handleApplyTrim}
               disabled={isTrimming || !isChanged}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold',
-                'bg-[#2874F0] hover:bg-[#1B5FCC] text-white transition-all',
-                'disabled:opacity-40 disabled:cursor-not-allowed'
+                'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold',
+                'bg-primary hover:bg-primary-hover text-white transition-all',
+                'disabled:cursor-not-allowed disabled:opacity-40'
               )}
             >
-              <Scissors className="w-3.5 h-3.5" />
+              <Scissors className="h-3.5 w-3.5" />
               {isTrimming ? 'Trimming...' : 'Apply Trim'}
             </button>
           </div>
@@ -367,21 +390,25 @@ export default function TimelineEditor({
       )}
 
       {mode === 'split' && (
-        <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
           <div className="flex items-center gap-4">
             <div>
-              <p className="text-[10px] text-white/40 uppercase font-bold">Split Point</p>
-              <p className="text-sm font-bold text-[#F59E0B]">{formatDuration(splitTime)}</p>
+              <p className="text-[10px] font-bold text-white/40 uppercase">Split Point</p>
+              <p className="text-warning text-sm font-bold">
+                {formatDuration(splitTime)}
+              </p>
             </div>
-            <div className="w-px h-6 bg-white/20" />
+            <div className="h-6 w-px bg-white/20" />
             <div>
-              <p className="text-[10px] text-white/40 uppercase font-bold">Part 1</p>
+              <p className="text-[10px] font-bold text-white/40 uppercase">Part 1</p>
               <p className="text-sm font-bold text-white">{formatDuration(splitTime)}</p>
             </div>
-            <div className="w-px h-6 bg-white/20" />
+            <div className="h-6 w-px bg-white/20" />
             <div>
-              <p className="text-[10px] text-white/40 uppercase font-bold">Part 2</p>
-              <p className="text-sm font-bold text-white">{formatDuration(duration - splitTime)}</p>
+              <p className="text-[10px] font-bold text-white/40 uppercase">Part 2</p>
+              <p className="text-sm font-bold text-white">
+                {formatDuration(duration - splitTime)}
+              </p>
             </div>
           </div>
 
@@ -389,12 +416,12 @@ export default function TimelineEditor({
             onClick={handleApplySplit}
             disabled={isSplitting}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold',
-              'bg-[#F59E0B] hover:bg-yellow-500 text-white transition-all',
-              'disabled:opacity-40 disabled:cursor-not-allowed'
+              'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold',
+              'bg-warning text-white transition-all hover:bg-yellow-500',
+              'disabled:cursor-not-allowed disabled:opacity-40'
             )}
           >
-            <Divide className="w-3.5 h-3.5" />
+            <Divide className="h-3.5 w-3.5" />
             {isSplitting ? 'Splitting...' : 'Apply Split'}
           </button>
         </div>

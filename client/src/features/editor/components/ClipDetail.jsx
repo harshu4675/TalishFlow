@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import CaptionEditor from './CaptionEditor'
 import TitleEditor from './TitleEditor'
@@ -7,8 +6,8 @@ import ClipPreview from './ClipPreview'
 
 export default function ClipDetail({ clip, activeTab, video }) {
   return (
-    <div className="flex flex-col lg:flex-row h-full">
-      <div className="lg:w-[320px] xl:w-[360px] border-b lg:border-b-0 lg:border-r border-white/10 flex-shrink-0 flex items-center justify-center p-6">
+    <div className="flex h-full flex-col lg:flex-row">
+      <div className="flex flex-shrink-0 items-center justify-center border-b border-white/10 p-6 lg:w-[320px] lg:border-r lg:border-b-0 xl:w-[360px]">
         <ClipPreview clip={clip} />
       </div>
 
@@ -37,7 +36,7 @@ function ClipInfoPanel({ clip }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-xs text-white/40 uppercase tracking-widest font-bold mb-3">
+        <p className="mb-3 text-xs font-bold tracking-widest text-white/40 uppercase">
           Clip Details
         </p>
 
@@ -50,14 +49,12 @@ function ClipInfoPanel({ clip }) {
           ].map((item) => (
             <div
               key={item.label}
-              className="bg-white/5 rounded-xl p-3 border border-white/10"
+              className="rounded-xl border border-white/10 bg-white/5 p-3"
             >
-              <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">
+              <p className="text-[10px] font-semibold tracking-wider text-white/40 uppercase">
                 {item.label}
               </p>
-              <p className="text-sm font-bold text-white mt-1 capitalize">
-                {item.value}
-              </p>
+              <p className="mt-1 text-sm font-bold text-white capitalize">{item.value}</p>
             </div>
           ))}
         </div>
@@ -65,14 +62,14 @@ function ClipInfoPanel({ clip }) {
 
       {clip.detectionReasons?.length > 0 && (
         <div>
-          <p className="text-xs text-white/40 uppercase tracking-widest font-bold mb-3">
+          <p className="mb-3 text-xs font-bold tracking-widest text-white/40 uppercase">
             Why this clip was selected
           </p>
           <div className="flex flex-wrap gap-2">
             {clip.detectionReasons.map((reason) => (
               <span
                 key={reason}
-                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#2874F0]/20 text-[#2874F0] border border-[#2874F0]/30"
+                className="bg-primary/20 text-primary border-primary/30 rounded-full border px-3 py-1.5 text-xs font-semibold"
               >
                 {reason}
               </span>

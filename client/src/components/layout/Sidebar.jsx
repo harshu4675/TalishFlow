@@ -1,5 +1,5 @@
+import { memo } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
   BarChart3,
@@ -8,139 +8,229 @@ import {
   Upload,
   Radio,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
   ChevronRight,
-  Sparkles,
 } from 'lucide-react'
 import { useAuthContext } from '@/context/AuthContext'
 import { ROUTES } from '@/utils/constants'
 import { cn } from '@/utils/cn'
 import { getInitials } from '@/utils/formatters'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import useLocalStorage from '@/hooks/useLocalStorage'
+import { motion } from 'framer-motion'
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.DASHBOARD },
-  { label: 'Publishing', icon: Radio, to: ROUTES.PUBLISHING },
-  { label: 'Analytics', icon: BarChart3, to: ROUTES.ANALYTICS },
-  { label: 'Settings', icon: Settings, to: ROUTES.SETTINGS },
+const NAV_SECTIONS = [
+  {
+    label: 'Main',
+    items: [
+      { label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.DASHBOARD },
+      { label: 'Publishing', icon: Radio, to: ROUTES.PUBLISHING },
+      { label: 'Analytics', icon: BarChart3, to: ROUTES.ANALYTICS },
+    ],
+  },
+  {
+    label: 'Manage',
+    items: [{ label: 'Settings', icon: Settings, to: ROUTES.SETTINGS }],
+  },
 ]
 
-function NavItem({ item }) {
+const NavItem = memo(function NavItem({ item, collapsed }) {
   const location = useLocation()
   const isActive =
     location.pathname === item.to ||
     (item.to !== ROUTES.DASHBOARD && location.pathname.startsWith(item.to))
 
-  return (
+  const link = (
     <NavLink
       to={item.to}
       className={cn(
-        'group relative flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold',
-        'transition-all duration-200',
+        'group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-200',
+        collapsed ? 'h-10 w-10 justify-center' : 'px-3 py-2.5',
         isActive
-          ? 'bg-gradient-to-r from-[#2874F0] to-[#1B5FCC] text-white shadow-lg shadow-[#2874F0]/25'
-          : 'text-[#878787] hover:bg-[#F8F9FA] hover:text-[#212121]'
+          ? 'bg-primary shadow-primary/25 text-white shadow-sm'
+          : 'text-foreground-muted hover:bg-surface-muted hover:text-foreground'
       )}
+      aria-current={isActive ? 'page' : undefined}
     >
       <item.icon
         className={cn(
-          'h-4.5 w-4.5 flex-shrink-0 transition-transform group-hover:scale-110',
-          isActive ? 'text-white' : 'text-[#878787] group-hover:text-[#2874F0]'
+          'h-[18px] w-[18px] flex-shrink-0 transition-transform duration-200',
+          isActive ? 'text-white' : 'text-foreground-muted group-hover:text-primary'
         )}
+        aria-hidden="true"
       />
-      <span className="flex-1 truncate">{item.label}</span>
-      {isActive && (
-        <motion.div
-          layoutId="active-indicator"
-          className="h-5 w-1 rounded-full bg-white/40"
+      {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+      {!collapsed && isActive && (
+        <motion.span
+          layoutId="sidebar-active-dot"
+          className="h-1.5 w-1.5 rounded-full bg-white/70"
         />
       )}
     </NavLink>
   )
-}
+
+  if (!collapsed) return link
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right">{item.label}</TooltipContent>
+    </Tooltip>
+  )
+})
+NavItem.displayName = 'NavItem'
 
 export default function Sidebar({ onClose }) {
   const { user } = useAuthContext()
+  const [collapsed, setCollapsed] = useLocalStorage('talishflow_sidebar_collapsed', false)
+
+  const openUpload = () => {
+    window.dispatchEvent(new CustomEvent('talishflow:open-upload'))
+  }
+
+  const uploadButton = (
+    <button
+      onClick={openUpload}
+      className={cn(
+        'group bg-primary shadow-primary/25 hover:bg-primary-hover hover:shadow-primary/30 relative flex w-full items-center gap-2.5 overflow-hidden rounded-xl text-white shadow-sm transition-all duration-200 hover:shadow-md',
+        collapsed ? 'h-10 w-10 justify-center' : 'px-3.5 py-2.5'
+      )}
+    >
+      <Upload className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+      {!collapsed && <span className="text-sm font-bold">Upload Video</span>}
+    </button>
+  )
 
   return (
-    <aside className="flex h-full flex-col border-r border-[#E0E0E0] bg-white">
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-[#F0F0F0] px-5 py-5">
-        <NavLink to={ROUTES.DASHBOARD} className="group flex items-center gap-2.5">
+    <aside
+      className={cn(
+        'border-border bg-surface flex h-full flex-col border-r transition-[width] duration-200',
+        collapsed ? 'w-[72px]' : 'w-[248px]'
+      )}
+    >
+      <div
+        className={cn(
+          'border-border-subtle flex flex-shrink-0 items-center border-b',
+          collapsed ? 'justify-center py-4' : 'justify-between px-4 py-4'
+        )}
+      >
+        <NavLink
+          to={ROUTES.DASHBOARD}
+          className="group flex items-center gap-2.5"
+          aria-label="TalishFlow dashboard"
+        >
           <div className="relative">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#2874F0] to-[#1B5FCC] shadow-lg shadow-[#2874F0]/30 transition-transform group-hover:scale-110">
-              <Zap className="h-4.5 w-4.5 text-white" fill="white" />
+            <div className="gradient-primary shadow-primary/25 flex h-9 w-9 items-center justify-center rounded-xl shadow-md transition-transform duration-200 group-hover:scale-105">
+              <Zap className="h-4.5 w-4.5 text-white" fill="white" aria-hidden="true" />
             </div>
-            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-[#FB641B]" />
+            <span className="border-surface bg-accent absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full border-2" />
           </div>
-          <div>
-            <span className="block text-[16px] leading-none font-extrabold tracking-tight text-[#212121]">
-              TalishFlow
-            </span>
-            <span className="text-[10px] font-medium text-[#878787]">Pro Dashboard</span>
-          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-foreground truncate text-[15px] leading-none font-extrabold tracking-tight">
+                  TalishFlow
+                </span>
+                <span className="bg-primary-light text-primary rounded-md px-1.5 py-0.5 text-[9px] leading-none font-black tracking-wider">
+                  PRO
+                </span>
+              </div>
+              <span className="text-foreground-faint mt-1 block text-[10px] font-medium">
+                Creator Studio
+              </span>
+            </div>
+          )}
         </NavLink>
 
-        <button
-          onClick={onClose}
-          className="rounded-lg p-1.5 text-[#878787] transition-colors hover:bg-[#F8F9FA] hover:text-[#212121] lg:hidden"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onClose}
+            className="text-foreground-muted hover:bg-surface-muted hover:text-foreground rounded-lg p-1.5 transition-colors lg:hidden"
+            aria-label="Close sidebar"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-foreground-faint hover:bg-surface-muted hover:text-foreground hidden rounded-lg p-1.5 transition-colors lg:block"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="px-3 pt-4">
-        <motion.button
-          whileHover={{ scale: 1.02, y: -1 }}
-          whileTap={{ scale: 0.98 }}
-          className="group relative flex w-full items-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-[#FB641B] to-[#E8560F] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#FB641B]/25 transition-all hover:shadow-xl hover:shadow-[#FB641B]/40"
-          onClick={() => window.dispatchEvent(new CustomEvent('talishflow:open-upload'))}
-        >
-          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
-          <Upload className="relative z-10 h-4 w-4" />
-          <span className="relative z-10">Upload Video</span>
-          <Sparkles className="relative z-10 ml-auto h-3.5 w-3.5" />
-        </motion.button>
+      <div className={cn('flex-shrink-0 px-3 pt-4', collapsed && 'px-2')}>
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{uploadButton}</TooltipTrigger>
+            <TooltipContent side="right">Upload Video</TooltipContent>
+          </Tooltip>
+        ) : (
+          uploadButton
+        )}
       </div>
 
-      <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-5">
-        <div className="flex flex-col gap-1">
-          <p className="px-3 pb-2 text-[10px] font-bold tracking-[0.1em] text-[#B0B0B0] uppercase">
-            Main Menu
-          </p>
-          {NAV_ITEMS.map((item) => (
-            <NavItem key={item.to} item={item} />
+      <nav
+        className={cn(
+          'no-scrollbar flex-1 overflow-y-auto py-5',
+          collapsed ? 'px-2' : 'px-3'
+        )}
+        aria-label="Main navigation"
+      >
+        <div className="flex flex-col gap-5">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.label}>
+              {!collapsed && (
+                <p className="text-foreground-faint px-3 pb-2 text-[10px] font-bold tracking-[0.12em] uppercase">
+                  {section.label}
+                </p>
+              )}
+              {collapsed && <div className="bg-border-subtle mx-auto mb-2 h-px w-8" />}
+              <div className="flex flex-col gap-1">
+                {section.items.map((item) => (
+                  <NavItem key={item.to} item={item} collapsed={collapsed} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </nav>
 
-      <div className="flex-shrink-0 border-t border-[#F0F0F0] px-3 py-4">
+      <div className="border-border-subtle flex-shrink-0 border-t p-3">
         <NavLink
           to={ROUTES.SETTINGS_PROFILE}
-          className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:bg-[#F8F9FA]"
+          className={cn(
+            'group hover:bg-surface-muted flex items-center rounded-xl transition-all duration-200',
+            collapsed ? 'justify-center p-1.5' : 'gap-3 px-2.5 py-2'
+          )}
         >
-          <div className="relative flex-shrink-0">
+          <Avatar className="ring-border-subtle h-9 w-9 ring-2">
             {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="h-9 w-9 rounded-full object-cover ring-2 ring-white"
-              />
+              <AvatarImage src={user.avatar} alt={user.name || 'User'} />
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#2874F0] to-[#1B5FCC] text-xs font-bold text-white ring-2 shadow-md ring-white">
-                {getInitials(user?.name || 'User')}
-              </div>
+              <AvatarFallback>{getInitials(user?.name || 'User')}</AvatarFallback>
             )}
-            <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#388E3C]" />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm leading-tight font-bold text-[#212121]">
-              {user?.name || 'User'}
-            </p>
-            <p className="truncate text-[11px] leading-tight text-[#878787]">
-              {user?.email}
-            </p>
-          </div>
-
-          <ChevronRight className="h-3.5 w-3.5 text-[#B0B0B0] transition-all group-hover:translate-x-0.5 group-hover:text-[#2874F0]" />
+          </Avatar>
+          {!collapsed && (
+            <>
+              <div className="min-w-0 flex-1">
+                <p className="text-foreground truncate text-sm leading-tight font-bold">
+                  {user?.name || 'User'}
+                </p>
+                <p className="text-foreground-faint truncate text-[11px] leading-tight">
+                  Creator
+                </p>
+              </div>
+              <ChevronRight className="text-foreground-faint h-3.5 w-3.5 flex-shrink-0 transition-transform group-hover:translate-x-0.5" />
+            </>
+          )}
         </NavLink>
       </div>
     </aside>

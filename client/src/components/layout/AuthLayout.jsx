@@ -1,15 +1,16 @@
 import { Outlet, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Zap, Sparkles, Play, TrendingUp, Award } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function AuthLayout() {
   return (
-    <div className="flex min-h-screen bg-[#F1F3F6]">
+    <div className="bg-canvas flex min-h-screen">
       <div className="relative hidden overflow-hidden lg:flex lg:w-[55%] xl:w-[58%]">
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(135deg, #2874F0 0%, #1B5FCC 50%, #0A3A8C 100%)',
+            background:
+              'linear-gradient(135deg, var(--tf-primary) 0%, var(--tf-primary-hover) 50%, var(--tf-primary-deep) 100%)',
           }}
         />
 
@@ -37,7 +38,7 @@ export default function AuthLayout() {
 
         <div className="relative z-10 flex w-full flex-col justify-between p-12 xl:p-16">
           <Link to="/" className="group flex w-fit items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/30 bg-white/15 backdrop-blur-md transition-transform duration-300 group-hover:scale-110">
+            <div className="bg-surface/15 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/30 backdrop-blur-md transition-transform duration-300 group-hover:scale-110">
               <Zap className="h-5 w-5 text-white" fill="white" />
             </div>
             <span className="text-2xl font-extrabold tracking-tight text-white">
@@ -51,8 +52,8 @@ export default function AuthLayout() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-[#FF9F00]" fill="#FF9F00" />
+              <div className="bg-surface/15 mb-6 inline-flex items-center gap-2 rounded-full border border-white/25 px-3 py-1.5 backdrop-blur-md">
+                <Sparkles className="text-warning h-3.5 w-3.5" fill="var(--tf-warning)" />
                 <span className="text-xs font-semibold tracking-wide text-white/95">
                   AI-POWERED VIDEO SHORTS
                 </span>
@@ -68,7 +69,8 @@ export default function AuthLayout() {
                 <span
                   className="relative inline-block"
                   style={{
-                    background: 'linear-gradient(135deg, #FF9F00 0%, #FB641B 100%)',
+                    background:
+                      'linear-gradient(135deg, var(--tf-warning) 0%, var(--tf-accent) 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -91,8 +93,12 @@ export default function AuthLayout() {
               className="grid grid-cols-2 gap-3"
             >
               {[
-                { icon: Play, label: 'Auto clip detection', color: '#FF9F00' },
-                { icon: TrendingUp, label: 'Viral optimization', color: '#FB641B' },
+                { icon: Play, label: 'Auto clip detection', color: 'var(--tf-warning)' },
+                {
+                  icon: TrendingUp,
+                  label: 'Viral optimization',
+                  color: 'var(--tf-accent)',
+                },
                 { icon: Sparkles, label: 'AI captions & titles', color: '#FFB800' },
                 { icon: Award, label: 'One-click publish', color: '#FF6B00' },
               ].map((feature, i) => (
@@ -101,7 +107,7 @@ export default function AuthLayout() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + i * 0.08 }}
-                  className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/10 p-3.5 backdrop-blur-md transition-colors hover:bg-white/15"
+                  className="bg-surface/10 hover:bg-surface/15 flex items-center gap-3 rounded-xl border border-white/20 p-3.5 backdrop-blur-md transition-colors"
                 >
                   <div
                     className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
@@ -129,7 +135,7 @@ export default function AuthLayout() {
                   key={i}
                   className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/40 text-sm font-bold text-white shadow-lg"
                   style={{
-                    background: `linear-gradient(135deg, ${['#FF9F00', '#FB641B', '#FFB800', '#FF6B00', '#F57C00'][i]}, ${['#F57C00', '#E8560F', '#FF9800', '#E64A00', '#EF6C00'][i]})`,
+                    background: `linear-gradient(135deg, ${['var(--tf-warning)', 'var(--tf-accent)', '#FFB800', '#FF6B00', '#F57C00'][i]}, ${['#F57C00', 'var(--tf-accent-hover)', '#FF9800', '#E64A00', '#EF6C00'][i]})`,
                     zIndex: 5 - i,
                   }}
                 >
@@ -141,7 +147,12 @@ export default function AuthLayout() {
               <p className="text-sm font-bold text-white">10,000+ creators</p>
               <div className="mt-0.5 flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
-                  <svg key={i} className="h-3.5 w-3.5" fill="#FF9F00" viewBox="0 0 20 20">
+                  <svg
+                    key={i}
+                    className="h-3.5 w-3.5"
+                    fill="var(--tf-warning)"
+                    viewBox="0 0 20 20"
+                  >
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 ))}
@@ -154,12 +165,12 @@ export default function AuthLayout() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col bg-white">
-        <div className="flex items-center gap-3 border-b border-[#E0E0E0] p-6 lg:hidden">
+      <div className="bg-surface flex flex-1 flex-col">
+        <div className="border-border flex items-center gap-3 border-b p-6 lg:hidden">
           <div className="gradient-primary flex h-9 w-9 items-center justify-center rounded-xl shadow-lg">
             <Zap className="h-4 w-4 text-white" fill="white" />
           </div>
-          <span className="text-xl font-extrabold text-[#212121]">TalishFlow</span>
+          <span className="text-foreground text-xl font-extrabold">TalishFlow</span>
         </div>
 
         <div className="flex flex-1 items-center justify-center p-6 sm:p-10">

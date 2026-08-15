@@ -2,25 +2,64 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Loader2, Shield, LogOut } from 'lucide-react'
+import { Eye, EyeOff, Shield, LogOut, Info } from 'lucide-react'
 import { useAuthContext } from '@/context/AuthContext'
 import { useNotificationContext } from '@/context/NotificationContext'
 import authService from '@/features/auth/services/authService'
-import { cn } from '@/utils/cn'
+import { Button } from '@/components/ui/button'
+import Input from '@/components/ui/input'
+import Label from '@/components/ui/label'
 
-const schema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain an uppercase letter')
-    .regex(/[a-z]/, 'Must contain a lowercase letter')
-    .regex(/[0-9]/, 'Must contain a number'),
-  confirmPassword: z.string(),
-}).refine((d) => d.newPassword === d.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-})
+const schema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Must contain an uppercase letter')
+      .regex(/[a-z]/, 'Must contain a lowercase letter')
+      .regex(/[0-9]/, 'Must contain a number'),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+
+function PasswordField({ id, label, show, onToggleShow, disabled, error, register }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type={show ? 'text' : 'password'}
+          disabled={disabled}
+          hasError={!!error}
+          className="pr-11"
+          {...register(id)}
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          className="text-foreground-faint hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded-lg p-1 transition-colors"
+          aria-label={show ? 'Hide password' : 'Show password'}
+        >
+          {show ? (
+            <EyeOff className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Eye className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+      {error && (
+        <p className="text-error text-xs font-medium" role="alert">
+          {error.message}
+        </p>
+      )}
+    </div>
+  )
+}
 
 export default function SecuritySettings() {
   const { logout } = useAuthContext()
@@ -64,112 +103,81 @@ export default function SecuritySettings() {
     }
   }
 
-  const inputClass = (hasError) =>
-    cn(
-      'w-full px-4 py-3 rounded-xl text-sm pr-11',
-      'bg-[#F8F9FA] border transition-all duration-150',
-      'text-[#212121] placeholder:text-[#878787]',
-      'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-[#2874F0]',
-      'disabled:opacity-50 disabled:cursor-not-allowed',
-      hasError
-        ? 'border-[#FF6161] focus:ring-danger/30 focus:border-[#FF6161]'
-        : 'border-[#E0E0E0] hover:border-[#2874F0]/30'
-    )
-
   return (
     <div>
-      <div className="px-6 py-5 border-b border-[#E0E0E0]">
-        <h2 className="text-[15px] font-bold text-[#212121]">Security</h2>
-        <p className="text-xs text-[#878787] mt-0.5">
+      <div className="border-border-subtle border-b px-6 py-5">
+        <h2 className="text-foreground text-[15px] font-bold">Security</h2>
+        <p className="text-foreground-muted mt-0.5 text-xs">
           Manage your password and active sessions.
         </p>
       </div>
 
-      <div className="px-6 py-6 flex flex-col gap-8">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield className="w-4 h-4 text-[#2874F0]" aria-hidden="true" />
-            <h3 className="text-sm font-bold text-[#212121]">Change Password</h3>
+      <div className="flex flex-col gap-8 px-6 py-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex max-w-md flex-col gap-5">
+          <div className="flex items-center gap-2">
+            <span className="bg-primary-light flex h-7 w-7 items-center justify-center rounded-lg">
+              <Shield className="text-primary h-4 w-4" aria-hidden="true" />
+            </span>
+            <h3 className="text-foreground text-sm font-bold">Change Password</h3>
           </div>
 
-          {[
-            { id: 'currentPassword', label: 'Current password', show: showCurrent, setShow: setShowCurrent },
-            { id: 'newPassword', label: 'New password', show: showNew, setShow: setShowNew },
-            { id: 'confirmPassword', label: 'Confirm new password', show: showNew, setShow: setShowNew },
-          ].map((field) => (
-            <div key={field.id} className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-[#212121]" htmlFor={field.id}>
-                {field.label}
-              </label>
-              <div className="relative">
-                <input
-                  id={field.id}
-                  type={field.show ? 'text' : 'password'}
-                  disabled={isSaving}
-                  {...register(field.id)}
-                  className={inputClass(!!errors[field.id])}
-                />
-                <button
-                  type="button"
-                  onClick={() => field.setShow(!field.show)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#878787] hover:text-[#212121] transition-colors"
-                  aria-label={field.show ? 'Hide password' : 'Show password'}
-                >
-                  {field.show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors[field.id] && (
-                <p className="text-xs text-[#EF4444] font-medium">
-                  {errors[field.id].message}
-                </p>
-              )}
-            </div>
-          ))}
+          <PasswordField
+            id="currentPassword"
+            label="Current password"
+            show={showCurrent}
+            onToggleShow={() => setShowCurrent(!showCurrent)}
+            disabled={isSaving}
+            error={errors.currentPassword}
+            register={register}
+          />
+          <PasswordField
+            id="newPassword"
+            label="New password"
+            show={showNew}
+            onToggleShow={() => setShowNew(!showNew)}
+            disabled={isSaving}
+            error={errors.newPassword}
+            register={register}
+          />
+          <PasswordField
+            id="confirmPassword"
+            label="Confirm new password"
+            show={showNew}
+            onToggleShow={() => setShowNew(!showNew)}
+            disabled={isSaving}
+            error={errors.confirmPassword}
+            register={register}
+          />
 
           <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className={cn(
-                'flex items-center gap-2 px-5 py-2.5 rounded-xl',
-                'bg-[#2874F0] hover:bg-[#1B5FCC] text-white text-sm font-semibold',
-                'transition-all duration-150 shadow-md shadow-primary/20',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50'
-              )}
-            >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+            <Button type="submit" loading={isSaving}>
               {isSaving ? 'Changing...' : 'Change password'}
-            </button>
+            </Button>
           </div>
         </form>
 
-        <div className="pt-6 border-t border-[#E0E0E0] flex flex-col gap-4">
-          <div>
-            <h3 className="text-sm font-bold text-[#212121]">Active Sessions</h3>
-            <p className="text-xs text-[#878787] mt-1 leading-relaxed">
-              Sign out of all devices and sessions. You will need to sign in again on all your devices.
+        <div className="border-border-subtle flex flex-col gap-4 border-t pt-6">
+          <div className="flex max-w-md flex-col gap-3">
+            <h3 className="text-foreground text-sm font-bold">Active Sessions</h3>
+            <p className="text-foreground-muted flex items-start gap-2 text-xs leading-relaxed">
+              <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+              Sign out of all devices and sessions. You will need to sign in again on all
+              your devices.
             </p>
-          </div>
-          <div>
-            <button
-              onClick={handleLogoutAll}
-              disabled={isLoggingOutAll}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-xl',
-                'text-sm font-semibold text-[#EF4444] border border-[#FF6161]/20',
-                'hover:bg-[#EF4444]/10 transition-all duration-150',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30'
-              )}
-            >
-              {isLoggingOutAll ? (
-                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <LogOut className="w-4 h-4" aria-hidden="true" />
-              )}
-              Sign out all devices
-            </button>
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={isLoggingOutAll}
+                onClick={handleLogoutAll}
+                className="text-error hover:bg-error-light hover:text-error"
+              >
+                {!isLoggingOutAll && (
+                  <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                Sign out all devices
+              </Button>
+            </div>
           </div>
         </div>
       </div>

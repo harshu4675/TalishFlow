@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -11,24 +11,25 @@ import {
   Crop,
   Clock,
   Download,
-  Loader2,
   Share2,
 } from 'lucide-react'
-import PublishingModal from '@/features/publishing/components/PublishingModal'
 import { apiClient } from '@/services/api'
 import { cn } from '@/utils/cn'
 import { ROUTES } from '@/utils/constants'
 import PageTitle from '@/components/common/PageTitle'
-import LoadingSpinner from '@/components/common/LoadingSpinner'
 import EmptyState from '@/components/common/EmptyState'
 import ClipGrid from '../components/ClipGrid'
 import ClipDetail from '../components/ClipDetail'
 import TimelineEditor from '../components/TimelineEditor'
 import ReframingPanel from '../components/ReframingPanel'
-import ExportModal from '../components/ExportModal'
 import clipService from '@/services/clipService'
 import timelineService from '@/services/timelineService'
 import { useNotificationContext } from '@/context/NotificationContext'
+
+const ExportModal = lazy(() => import('../components/ExportModal'))
+const PublishingModal = lazy(
+  () => import('@/features/publishing/components/PublishingModal')
+)
 
 async function fetchVideo(videoId) {
   const response = await apiClient.get(`/videos/${videoId}`)
@@ -36,7 +37,9 @@ async function fetchVideo(videoId) {
 }
 
 async function fetchClips(videoId) {
-  const response = await apiClient.get(`/clips?videoId=${videoId}&sort=-detectionScore&limit=20`)
+  const response = await apiClient.get(
+    `/clips?videoId=${videoId}&sort=-detectionScore&limit=20`
+  )
   return response.data.data.clips
 }
 
@@ -49,10 +52,41 @@ const TABS = [
   { id: 'hashtags', label: 'Hashtags', icon: Hash },
 ]
 
+function EditorSkeleton() {
+  return (
+    <div className="flex min-h-screen flex-col bg-[#0C1117]">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-white/10 px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="skeleton h-9 w-9 rounded-xl" />
+          <div className="flex flex-col gap-2">
+            <div className="skeleton h-3.5 w-48" />
+            <div className="skeleton h-3 w-28" />
+          </div>
+        </div>
+        <div className="skeleton h-9 w-40 rounded-xl" />
+      </div>
+      <div className="flex flex-1">
+        <div className="hidden w-[200px] flex-shrink-0 border-r border-white/10 p-3 sm:block">
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="skeleton h-24 w-full rounded-xl" />
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="skeleton h-64 w-36 rounded-2xl" />
+            <div className="skeleton h-4 w-56" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function EditorPage() {
   const { videoId } = useParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { success, error, info } = useNotificationContext()
   const videoRef = useRef(null)
 
@@ -60,11 +94,10 @@ export default function EditorPage() {
   const [selectedClip, setSelectedClip] = useState(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [isPublishOpen, setIsPublishOpen] = useState(false)
   const [isTrimming, setIsTrimming] = useState(false)
   const [isSplitting, setIsSplitting] = useState(false)
-    const [isExporting, setIsExporting] = useState(false)
-    
-const [isPublishOpen, setIsPublishOpen] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const { data: video, isLoading: isLoadingVideo } = useQuery({
     queryKey: ['videos', videoId],
@@ -72,7 +105,11 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
     enabled: !!videoId,
   })
 
-  const { data: clips = [], isLoading: isLoadingClips, refetch: refetchClips } = useQuery({
+  const {
+    data: clips = [],
+    isLoading: isLoadingClips,
+    refetch: refetchClips,
+  } = useQuery({
     queryKey: ['clips', 'video', videoId],
     queryFn: () => fetchClips(videoId),
     enabled: !!videoId,
@@ -86,8 +123,8 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
   })
 
   useEffect(() => {
-    if (clips.length && !selectedClip) {
-      setSelectedClip(clips[0])
+    if (clips.length) {
+      setSelectedClip((current) => current || clips[0])
     }
   }, [clips])
 
@@ -135,7 +172,10 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
     try {
       await clipService.exportClip(selectedClip._id, options)
       setIsExportOpen(false)
-      success('Export started', 'Your clip export has started. You will be notified when ready.')
+      success(
+        'Export started',
+        'Your clip export has started. You will be notified when ready.'
+      )
     } catch (err) {
       error('Export failed', err.userMessage || 'Could not export the clip.')
     } finally {
@@ -144,114 +184,122 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
   }
 
   if (isLoadingVideo) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0C1117]">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
+    return <EditorSkeleton />
   }
 
   if (!video) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0C1117]">
+      <div className="flex min-h-screen items-center justify-center bg-[#0C1117]">
         <EmptyState
+          dark
           icon={Scissors}
           title="Video not found"
           description="This video does not exist or has been deleted."
+          action={{
+            label: 'Back to dashboard',
+            onClick: () => navigate(ROUTES.DASHBOARD),
+          }}
         />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0C1117] text-white flex flex-col overflow-hidden">
+    <div className="flex min-h-screen flex-col overflow-hidden bg-[#0C1117] text-white">
       <PageTitle title={video.title || 'Editor'} />
 
-      <header className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 flex-shrink-0 bg-[#0C1117]">
-        <div className="flex items-center gap-3">
+      <header className="flex flex-shrink-0 items-center justify-between border-b border-white/10 bg-[#0C1117] px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={() => navigate(ROUTES.DASHBOARD)}
-            className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
+            className="rounded-xl p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Back to dashboard"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </button>
 
-          <div>
-            <h1 className="text-sm font-bold text-white truncate max-w-[240px] sm:max-w-[400px]">
+          <div className="min-w-0">
+            <h1 className="max-w-[220px] truncate text-sm font-bold text-white sm:max-w-[400px]">
               {video.title || 'Untitled Video'}
             </h1>
-            <p className="text-[11px] text-white/40 mt-0.5">
+            <p className="mt-0.5 text-[11px] text-white/40">
               {clips.length} clip{clips.length !== 1 ? 's' : ''} generated
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-1 bg-white/10 rounded-xl p-1">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all',
-                  activeTab === tab.id
-                    ? 'bg-[#2874F0] text-white'
-                    : 'text-white/50 hover:text-white'
-                )}
-              >
-                <tab.icon className="w-3.5 h-3.5" />
-                <span className="hidden lg:block">{tab.label}</span>
-              </button>
-            ))}
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <div className="hidden items-center gap-0.5 rounded-xl bg-white/10 p-1 md:flex">
+            {TABS.map((tab) => {
+              const Icon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold transition-all',
+                    activeTab === tab.id
+                      ? 'bg-primary text-white'
+                      : 'text-white/50 hover:text-white'
+                  )}
+                  aria-pressed={activeTab === tab.id}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden xl:block">{tab.label}</span>
+                </button>
+              )
+            })}
           </div>
 
           <button
             onClick={() => setIsExportOpen(true)}
             disabled={!selectedClip}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold',
-              'bg-[#2874F0] hover:bg-[#1B5FCC] text-white transition-all shadow-md',
-              'disabled:opacity-40 disabled:cursor-not-allowed'
+              'bg-primary hover:bg-primary-hover flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all',
+              'disabled:cursor-not-allowed disabled:opacity-40'
             )}
           >
-            <Download className="w-4 h-4" />
+            <Download className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:block">Export</span>
-                  </button>
-                  <button
-  onClick={() => setIsPublishOpen(true)}
-  disabled={!selectedClip}
-  className={cn(
-    'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold',
-    'bg-white border border-[#E0E0E0] text-[#212121] hover:bg-[#F8F9FA] transition-all',
-    'disabled:opacity-40 disabled:cursor-not-allowed'
-  )}
->
-  <Share2 className="w-4 h-4" />
-  <span className="hidden sm:block">Publish</span>
-</button>
+          </button>
+          <button
+            onClick={() => setIsPublishOpen(true)}
+            disabled={!selectedClip}
+            className={cn(
+              'flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/10',
+              'disabled:cursor-not-allowed disabled:opacity-40'
+            )}
+          >
+            <Share2 className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:block">Publish</span>
+          </button>
         </div>
       </header>
 
-      <div className="sm:hidden flex items-center gap-1 bg-white/10 mx-3 mt-3 rounded-xl p-1 flex-shrink-0">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'flex-1 flex items-center justify-center py-2 rounded-lg text-[10px] font-semibold transition-all',
-              activeTab === tab.id
-                ? 'bg-[#2874F0] text-white'
-                : 'text-white/40 hover:text-white'
-            )}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-          </button>
-        ))}
+      <div className="no-scrollbar mx-3 mt-3 flex flex-shrink-0 items-center gap-1 overflow-x-auto rounded-xl bg-white/10 p-1 md:hidden">
+        {TABS.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[10px] font-semibold whitespace-nowrap transition-all',
+                activeTab === tab.id
+                  ? 'bg-primary text-white'
+                  : 'text-white/40 hover:text-white'
+              )}
+              aria-pressed={activeTab === tab.id}
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-[200px] xl:w-[240px] border-r border-white/10 flex-shrink-0 overflow-y-auto">
+        <div className="no-scrollbar w-[190px] flex-shrink-0 overflow-y-auto border-r border-white/10 xl:w-[240px]">
           <ClipGrid
             clips={clips}
             isLoading={isLoadingClips}
@@ -261,7 +309,7 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto flex flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           {selectedClip ? (
             <AnimatePresence mode="wait">
               <motion.div
@@ -270,16 +318,16 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.18 }}
-                className="flex-1 flex flex-col"
+                className="flex flex-1 flex-col"
               >
                 {activeTab === 'timeline' ? (
-                  <div className="flex flex-col lg:flex-row h-full">
-                    <div className="lg:w-[280px] xl:w-[320px] border-b lg:border-b-0 lg:border-r border-white/10 flex-shrink-0 flex items-center justify-center p-6">
-                      <div className="w-full max-w-[200px] aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-white/10 relative">
+                  <div className="flex h-full flex-col lg:flex-row">
+                    <div className="flex flex-shrink-0 items-center justify-center border-b border-white/10 p-6 lg:w-[280px] lg:border-r lg:border-b-0 xl:w-[320px]">
+                      <div className="relative aspect-[9/16] w-full max-w-[200px] overflow-hidden rounded-2xl border border-white/10 bg-black">
                         {selectedClip.filePath ? (
                           <video
                             ref={videoRef}
-                            className="w-full h-full object-cover"
+                            className="h-full w-full object-cover"
                             onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
                             playsInline
                           >
@@ -289,14 +337,14 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
                             />
                           </video>
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
+                          <div className="flex h-full w-full items-center justify-center">
                             <p className="text-xs text-white/30">Preview unavailable</p>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex-1 p-6 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto p-6">
                       <TimelineEditor
                         clip={selectedClip}
                         waveformData={waveformQuery.data?.waveform || []}
@@ -310,41 +358,44 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
                     </div>
                   </div>
                 ) : activeTab === 'reframing' ? (
-                  <div className="flex flex-col lg:flex-row h-full">
-                    <div className="lg:w-[280px] xl:w-[320px] border-b lg:border-b-0 lg:border-r border-white/10 flex-shrink-0 flex items-center justify-center p-6">
-                      <div className="w-full max-w-[200px] aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-white/10">
+                  <div className="flex h-full flex-col lg:flex-row">
+                    <div className="flex flex-shrink-0 items-center justify-center border-b border-white/10 p-6 lg:w-[280px] lg:border-r lg:border-b-0 xl:w-[320px]">
+                      <div className="aspect-[9/16] w-full max-w-[200px] overflow-hidden rounded-2xl border border-white/10 bg-black">
                         {selectedClip.thumbnailPath ? (
                           <img
                             src={`/api/v1/clips/${selectedClip._id}/thumbnail`}
                             alt="Clip thumbnail"
-                            className="w-full h-full object-cover"
+                            className="h-full w-full object-cover"
+                            loading="lazy"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
+                          <div className="flex h-full w-full items-center justify-center">
                             <p className="text-xs text-white/30">No preview</p>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex-1 p-6 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto p-6">
                       <ReframingPanel clip={selectedClip} />
                     </div>
                   </div>
                 ) : (
-                  <ClipDetail
-                    clip={selectedClip}
-                    activeTab={activeTab}
-                    video={video}
-                  />
+                  <ClipDetail clip={selectedClip} activeTab={activeTab} video={video} />
                 )}
               </motion.div>
             </AnimatePresence>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-1 items-center justify-center">
               <EmptyState
+                dark
+                compact
                 icon={Scissors}
-                title={video.processingStatus === 'completed' ? 'No clips generated' : 'Processing video'}
+                title={
+                  video.processingStatus === 'completed'
+                    ? 'No clips generated'
+                    : 'Processing video'
+                }
                 description={
                   video.processingStatus === 'completed'
                     ? 'No engaging moments were detected.'
@@ -356,18 +407,20 @@ const [isPublishOpen, setIsPublishOpen] = useState(false)
         </div>
       </div>
 
-      <ExportModal
-        isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
-        onExport={handleExport}
-        isExporting={isExporting}
-        clipTitle={selectedClip?.title}
-          />
-          <PublishingModal
-  isOpen={isPublishOpen}
-  onClose={() => setIsPublishOpen(false)}
-  clip={selectedClip}
-/>
+      <Suspense fallback={null}>
+        <ExportModal
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
+          onExport={handleExport}
+          isExporting={isExporting}
+          clipTitle={selectedClip?.title}
+        />
+        <PublishingModal
+          isOpen={isPublishOpen}
+          onClose={() => setIsPublishOpen(false)}
+          clip={selectedClip}
+        />
+      </Suspense>
     </div>
   )
 }

@@ -1,10 +1,9 @@
-import { motion } from 'framer-motion'
 import { cn } from '@/utils/cn'
 import authService from '../services/authService'
 
 function GoogleIcon() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
         fill="#4285F4"
@@ -28,37 +27,29 @@ function GoogleIcon() {
 export default function OAuthButtons({ isLoading = false, className }) {
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      {/* Divider */}
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-xs text-[#878787] font-medium px-1">
+        <div className="bg-border h-px flex-1" />
+        <span className="text-foreground-muted px-1 text-xs font-medium">
           or continue with
         </span>
-        <div className="flex-1 h-px bg-border" />
+        <div className="bg-border h-px flex-1" />
       </div>
 
-      {/* Google Button */}
-      <motion.button
+      <button
         type="button"
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
         onClick={authService.initiateGoogleOAuth}
         disabled={isLoading}
         className={cn(
-          'w-full flex items-center justify-center gap-3',
-          'px-4 py-3 rounded-xl',
-          'bg-white border border-[#E0E0E0]',
-          'text-[#212121] text-sm font-semibold',
-          'shadow-card hover:shadow-md',
-          'transition-all duration-200',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50'
+          'border-border bg-surface text-foreground shadow-card flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 text-sm font-semibold transition-all duration-200',
+          'hover:border-foreground-faint/50 hover:shadow-md',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          'focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:outline-none'
         )}
         aria-label="Continue with Google"
       >
         <GoogleIcon />
         Continue with Google
-      </motion.button>
+      </button>
     </div>
   )
 }

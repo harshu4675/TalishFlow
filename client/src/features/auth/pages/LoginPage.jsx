@@ -13,11 +13,10 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams()
 
   useEffect(() => {
-    const oauthError = searchParams.get('error')
-    if (oauthError === 'oauth_failed') {
+    if (searchParams.get('error') === 'oauth_failed') {
       showError('Sign in failed', 'OAuth sign-in was unsuccessful. Please try again.')
     }
-  }, [])
+  }, [searchParams, showError])
 
   const handleLogin = async (data) => {
     await loginWithFeedback(data)
@@ -28,23 +27,23 @@ export default function LoginPage() {
       <PageTitle title="Sign in" />
 
       <div className="flex flex-col gap-3">
-        <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[#E7F1FE] px-3 py-1">
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#2874F0]" />
-          <span className="text-xs font-semibold text-[#2874F0]">Welcome back</span>
+        <div className="bg-primary-light inline-flex w-fit items-center gap-2 rounded-full px-3 py-1">
+          <div className="bg-primary h-1.5 w-1.5 animate-pulse rounded-full" />
+          <span className="text-primary text-xs font-semibold">Welcome back</span>
         </div>
 
         <h1
-          className="leading-tight font-extrabold tracking-tight text-[#212121]"
+          className="text-foreground leading-tight font-extrabold tracking-tight"
           style={{ fontSize: 'clamp(28px, 3vw, 36px)' }}
         >
           Sign in to your account
         </h1>
 
-        <p className="text-sm text-[#878787]">
+        <p className="text-foreground-muted text-sm">
           New to TalishFlow?{' '}
           <Link
             to={ROUTES.REGISTER}
-            className="font-semibold text-[#2874F0] transition-colors hover:text-[#1B5FCC]"
+            className="text-primary hover:text-primary-hover font-semibold transition-colors"
           >
             Create account
           </Link>
@@ -58,7 +57,7 @@ export default function LoginPage() {
       <div className="text-center">
         <Link
           to={ROUTES.FORGOT_PASSWORD}
-          className="text-sm font-medium text-[#878787] transition-colors hover:text-[#2874F0]"
+          className="text-foreground-muted hover:text-primary text-sm font-medium transition-colors"
         >
           Forgot your password?
         </Link>

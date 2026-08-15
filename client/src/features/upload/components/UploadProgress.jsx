@@ -1,58 +1,51 @@
-import { motion } from 'framer-motion'
-import {
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  X,
-  FileVideo,
-  Clock,
-} from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, X, FileVideo, Clock } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { formatFileSize } from '@/utils/formatters'
+import { motion } from 'framer-motion'
 
 const statusConfig = {
   preparing: {
     label: 'Preparing upload',
     icon: Clock,
-    color: 'text-[#878787]',
+    color: 'text-foreground-muted',
   },
   uploading: {
     label: 'Uploading',
     icon: Loader2,
-    color: 'text-[#2874F0]',
+    color: 'text-primary',
     spinning: true,
   },
   finalizing: {
     label: 'Finalizing upload',
     icon: Loader2,
-    color: 'text-[#2874F0]',
+    color: 'text-primary',
     spinning: true,
   },
   importing: {
     label: 'Adding YouTube video',
     icon: Loader2,
-    color: 'text-[#2874F0]',
+    color: 'text-primary',
     spinning: true,
   },
   queued: {
     label: 'Queued for processing',
     icon: CheckCircle2,
-    color: 'text-[#22C55E]',
+    color: 'text-success',
   },
   completed: {
     label: 'Completed',
     icon: CheckCircle2,
-    color: 'text-[#22C55E]',
+    color: 'text-success',
   },
   failed: {
     label: 'Upload failed',
     icon: AlertCircle,
-    color: 'text-[#EF4444]',
+    color: 'text-error',
   },
   cancelled: {
     label: 'Cancelled',
     icon: AlertCircle,
-    color: 'text-[#878787]',
+    color: 'text-foreground-muted',
   },
 }
 
@@ -72,27 +65,23 @@ export default function UploadProgress({ upload, onCancel, onRemove }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="flex items-center gap-3 p-3 rounded-xl bg-[#F8F9FA] border border-[#E0E0E0]"
+      className="bg-surface-muted border-border flex items-center gap-3 rounded-xl border p-3"
     >
-      <div className="w-9 h-9 rounded-xl bg-white border border-[#E0E0E0] flex items-center justify-center flex-shrink-0 overflow-hidden">
+      <div className="bg-surface border-border flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border">
         {upload.thumbnailUrl ? (
-          <img
-            src={upload.thumbnailUrl}
-            alt=""
-            className="w-full h-full object-cover"
-          />
+          <img src={upload.thumbnailUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <FileVideo className="w-4 h-4 text-[#2874F0]" aria-hidden="true" />
+          <FileVideo className="text-primary h-4 w-4" aria-hidden="true" />
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-bold text-[#212121] truncate">{upload.name}</p>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <p className="text-foreground truncate text-xs font-bold">{upload.name}</p>
+          <div className="flex flex-shrink-0 items-center gap-1.5">
             <Icon
               className={cn(
-                'w-3.5 h-3.5',
+                'h-3.5 w-3.5',
                 config.color,
                 config.spinning && 'animate-spin'
               )}
@@ -105,16 +94,16 @@ export default function UploadProgress({ upload, onCancel, onRemove }) {
         </div>
 
         {upload.kind === 'file' && (
-          <p className="text-[11px] text-[#878787] truncate mt-0.5">
+          <p className="text-foreground-muted mt-0.5 truncate text-[11px]">
             {formatFileSize(upload.size || 0)}
             {upload.status === 'uploading' && ` · ${upload.progress || 0}%`}
           </p>
         )}
 
         {isActive && upload.kind === 'file' && (
-          <div className="h-1.5 w-full rounded-full bg-white overflow-hidden mt-2">
+          <div className="bg-surface mt-2 h-1.5 w-full overflow-hidden rounded-full">
             <motion.div
-              className="h-full rounded-full bg-[#2874F0]"
+              className="bg-primary h-full rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${upload.progress || 0}%` }}
               transition={{ duration: 0.25, ease: 'linear' }}
@@ -123,25 +112,25 @@ export default function UploadProgress({ upload, onCancel, onRemove }) {
         )}
 
         {upload.error && (
-          <p className="text-[11px] text-[#EF4444] mt-1 truncate">{upload.error}</p>
+          <p className="text-error mt-1 truncate text-[11px]">{upload.error}</p>
         )}
       </div>
 
       {isActive ? (
         <button
           onClick={() => onCancel(upload.id)}
-          className="p-1.5 rounded-lg text-[#878787] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors"
+          className="text-foreground-muted hover:text-error hover:bg-error/10 rounded-lg p-1.5 transition-colors"
           aria-label={`Cancel upload for ${upload.name}`}
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </button>
       ) : isTerminal ? (
         <button
           onClick={() => onRemove(upload.id)}
-          className="p-1.5 rounded-lg text-[#878787] hover:text-[#212121] hover:bg-white transition-colors"
+          className="text-foreground-muted hover:text-foreground hover:bg-surface rounded-lg p-1.5 transition-colors"
           aria-label={`Remove ${upload.name} from upload list`}
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </button>
       ) : null}
     </motion.div>

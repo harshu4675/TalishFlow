@@ -1,5 +1,5 @@
+import { memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   Video,
@@ -8,13 +8,13 @@ import {
   AlertCircle,
   Loader2,
   ChevronRight,
-  MoreHorizontal,
 } from 'lucide-react'
 import { apiClient } from '@/services/api'
 import { QUERY_KEYS, PROCESSING_STATUS } from '@/utils/constants'
 import { formatRelativeTime, formatDuration, formatFileSize } from '@/utils/formatters'
 import { cn } from '@/utils/cn'
 import EmptyState from '@/components/common/EmptyState'
+import { motion } from 'framer-motion'
 
 async function fetchRecentUploads() {
   const response = await apiClient.get('/videos?limit=5&sort=-createdAt')
@@ -26,22 +26,22 @@ function StatusBadge({ status }) {
     [PROCESSING_STATUS.COMPLETED]: {
       label: 'Ready',
       icon: CheckCircle2,
-      class: 'text-[#22C55E] bg-[#22C55E]/10',
+      class: 'text-success bg-success/10',
     },
     [PROCESSING_STATUS.FAILED]: {
       label: 'Failed',
       icon: AlertCircle,
-      class: 'text-[#EF4444] bg-[#EF4444]/10',
+      class: 'text-error bg-error/10',
     },
     [PROCESSING_STATUS.PENDING]: {
       label: 'Pending',
       icon: Clock,
-      class: 'text-[#878787] bg-[#F8F9FA]',
+      class: 'text-foreground-muted bg-surface-muted',
     },
     [PROCESSING_STATUS.ANALYZING]: {
       label: 'Processing',
       icon: Loader2,
-      class: 'text-[#2874F0] bg-[#2874F0]/10',
+      class: 'text-primary bg-primary/10',
       spin: true,
     },
   }
@@ -52,12 +52,12 @@ function StatusBadge({ status }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold',
         matched.class
       )}
     >
       <Icon
-        className={cn('w-3 h-3', matched.spin && 'animate-spin')}
+        className={cn('h-3 w-3', matched.spin && 'animate-spin')}
         aria-hidden="true"
       />
       {matched.label}
@@ -67,21 +67,21 @@ function StatusBadge({ status }) {
 
 function VideoThumbnail({ video }) {
   return (
-    <div className="w-14 h-10 rounded-lg bg-[#F8F9FA] flex-shrink-0 overflow-hidden relative">
+    <div className="bg-surface-muted relative h-10 w-14 flex-shrink-0 overflow-hidden rounded-lg">
       {video.thumbnailUrl ? (
         <img
           src={video.thumbnailUrl}
           alt=""
-          className="w-full h-full object-cover"
+          className="h-full w-full object-cover"
           loading="lazy"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <Video className="w-5 h-5 text-[#878787]" aria-hidden="true" />
+        <div className="flex h-full w-full items-center justify-center">
+          <Video className="text-foreground-muted h-5 w-5" aria-hidden="true" />
         </div>
       )}
       {video.duration && (
-        <span className="absolute bottom-0.5 right-0.5 text-[9px] font-bold text-white bg-black/70 rounded px-1 leading-snug">
+        <span className="absolute right-0.5 bottom-0.5 rounded bg-black/70 px-1 text-[9px] leading-snug font-bold text-white">
           {formatDuration(video.duration)}
         </span>
       )}
@@ -89,7 +89,7 @@ function VideoThumbnail({ video }) {
   )
 }
 
-function UploadRow({ video, index }) {
+const UploadRow = memo(function UploadRow({ video, index }) {
   const navigate = useNavigate()
 
   return (
@@ -97,7 +97,7 @@ function UploadRow({ video, index }) {
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#F8F9FA] transition-all duration-150 cursor-pointer group"
+      className="hover:bg-surface-muted group flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-all duration-150"
       onClick={() => navigate(`/editor/${video._id}`)}
       role="row"
       tabIndex={0}
@@ -106,18 +106,20 @@ function UploadRow({ video, index }) {
     >
       <VideoThumbnail video={video} />
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#212121] truncate leading-snug">
+      <div className="min-w-0 flex-1">
+        <p className="text-foreground truncate text-sm leading-snug font-semibold">
           {video.title || 'Untitled Video'}
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[11px] text-[#878787]">
+        <div className="mt-0.5 flex items-center gap-2">
+          <span className="text-foreground-muted text-[11px]">
             {formatRelativeTime(video.createdAt)}
           </span>
           {video.fileSize && (
             <>
-              <span className="text-border" aria-hidden="true">·</span>
-              <span className="text-[11px] text-[#878787]">
+              <span className="text-border" aria-hidden="true">
+                ·
+              </span>
+              <span className="text-foreground-muted text-[11px]">
                 {formatFileSize(video.fileSize)}
               </span>
             </>
@@ -125,33 +127,32 @@ function UploadRow({ video, index }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center gap-2">
         <StatusBadge status={video.processingStatus} />
         <ChevronRight
-          className="w-3.5 h-3.5 text-[#878787] opacity-0 group-hover:opacity-100 transition-opacity"
+          className="text-foreground-muted h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100"
           aria-hidden="true"
         />
       </div>
     </motion.div>
   )
-}
+})
+UploadRow.displayName = 'UploadRow'
 
 function UploadRowSkeleton() {
   return (
     <div className="flex items-center gap-3 p-3">
-      <div className="w-14 h-10 rounded-lg skeleton flex-shrink-0" />
-      <div className="flex-1 flex flex-col gap-2">
-        <div className="h-3.5 w-40 skeleton rounded-lg" />
-        <div className="h-3 w-24 skeleton rounded-lg" />
+      <div className="skeleton h-10 w-14 flex-shrink-0 rounded-lg" />
+      <div className="flex flex-1 flex-col gap-2">
+        <div className="skeleton h-3.5 w-40 rounded-lg" />
+        <div className="skeleton h-3 w-24 rounded-lg" />
       </div>
-      <div className="h-6 w-16 skeleton rounded-full" />
+      <div className="skeleton h-6 w-16 rounded-full" />
     </div>
   )
 }
 
 export default function RecentUploads() {
-  const navigate = useNavigate()
-
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEYS.DASHBOARD.RECENT_UPLOADS,
     queryFn: fetchRecentUploads,
@@ -161,15 +162,17 @@ export default function RecentUploads() {
   const videos = data?.videos || []
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E0E0E0]">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0E0E0]">
+    <div className="bg-surface border-border rounded-2xl border">
+      <div className="border-border flex items-center justify-between border-b px-5 py-4">
         <div>
-          <h2 className="text-[15px] font-bold text-[#212121]">Recent Uploads</h2>
-          <p className="text-xs text-[#878787] mt-0.5">Your latest video uploads</p>
+          <h2 className="text-foreground text-[15px] font-bold">Recent Uploads</h2>
+          <p className="text-foreground-muted mt-0.5 text-xs">
+            Your latest video uploads
+          </p>
         </div>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('talishflow:open-upload'))}
-          className="text-xs font-semibold text-[#2874F0] hover:text-[#2874F0]-hover transition-colors"
+          className="text-primary hover:text-primary-hover text-xs font-semibold transition-colors"
         >
           Upload new
         </button>
@@ -185,7 +188,8 @@ export default function RecentUploads() {
             description="Upload your first video to get started."
             action={{
               label: 'Upload Video',
-              onClick: () => window.dispatchEvent(new CustomEvent('talishflow:open-upload')),
+              onClick: () =>
+                window.dispatchEvent(new CustomEvent('talishflow:open-upload')),
             }}
           />
         ) : (

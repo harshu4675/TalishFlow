@@ -27,6 +27,7 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
+    allowedHosts: ['.e2b.app'],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
@@ -54,13 +55,18 @@ export default defineConfig({
           motion: ['framer-motion'],
           charts: ['recharts'],
           radix: [
+            '@radix-ui/react-avatar',
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-label',
+            '@radix-ui/react-select',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-switch',
             '@radix-ui/react-tabs',
             '@radix-ui/react-tooltip',
-            '@radix-ui/react-select',
           ],
           forms: ['react-hook-form', 'zod', '@hookform/resolvers'],
+          socket: ['socket.io-client'],
           editor: ['./src/features/editor/pages/EditorPage'],
           analytics: ['./src/features/analytics/pages/AnalyticsPage'],
           publishing: ['./src/features/publishing/pages/PublishingPage'],

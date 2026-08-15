@@ -2,11 +2,13 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
 import { ROUTES } from '@/utils/constants'
+import PageLoader from '@/components/common/PageLoader'
 
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage'))
+const NotFoundPage = lazy(() => import('@/features/misc/pages/NotFoundPage'))
 
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
 const EditorPage = lazy(() => import('@/features/editor/pages/EditorPage'))
@@ -17,29 +19,10 @@ const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage')
 const DashboardLayout = lazy(() => import('@/components/layout/DashboardLayout'))
 const AuthLayout = lazy(() => import('@/components/layout/AuthLayout'))
 
-function PageLoader() {
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#F1F3F6',
-        color: '#2874F0',
-        fontSize: '20px',
-        fontWeight: 'bold',
-      }}
-    >
-      Loading...
-    </div>
-  )
-}
-
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuthContext()
 
-  if (isLoading) return <PageLoader />
+  if (isLoading) return <PageLoader label="Preparing your workspace" />
   if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />
   return <Outlet />
 }
@@ -47,7 +30,7 @@ function ProtectedRoute() {
 function PublicRoute() {
   const { isAuthenticated, isLoading } = useAuthContext()
 
-  if (isLoading) return <PageLoader />
+  if (isLoading) return <PageLoader label="Loading" />
   if (isAuthenticated) return <Navigate to={ROUTES.DASHBOARD} replace />
   return <Outlet />
 }
@@ -118,23 +101,9 @@ const router = createBrowserRouter([
   {
     path: '*',
     element: (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#F1F3F6',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '48px', color: '#2874F0' }}>404</h1>
-          <p>Page not found</p>
-          <a href="/login" style={{ color: '#2874F0' }}>
-            Go to Login
-          </a>
-        </div>
-      </div>
+      <PageWrapper>
+        <NotFoundPage />
+      </PageWrapper>
     ),
   },
 ])

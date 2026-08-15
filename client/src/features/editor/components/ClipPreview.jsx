@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Play, Pause, Volume2, VolumeX, Download } from 'lucide-react'
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { formatDuration } from '@/utils/formatters'
 
@@ -40,12 +40,12 @@ export default function ClipPreview({ clip }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full max-w-[220px]">
-      <div className="relative w-full aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-white/10">
+    <div className="flex w-full max-w-[220px] flex-col items-center gap-4">
+      <div className="relative aspect-[9/16] w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
         {clip.filePath ? (
           <video
             ref={videoRef}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onTimeUpdate={handleTimeUpdate}
@@ -55,33 +55,35 @@ export default function ClipPreview({ clip }) {
             <source src={`/api/v1/clips/${clip._id}/stream`} type="video/mp4" />
           </video>
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="flex h-full w-full items-center justify-center">
             <p className="text-xs text-white/30">Preview unavailable</p>
           </div>
         )}
 
         <button
           onClick={handlePlayPause}
-          className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors group"
+          className="group absolute inset-0 flex items-center justify-center bg-black/0 transition-colors hover:bg-black/20"
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
-          <div className={cn(
-            'w-12 h-12 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center transition-all',
-            'opacity-0 group-hover:opacity-100',
-            isPlaying && 'opacity-0 group-hover:opacity-100'
-          )}>
+          <div
+            className={cn(
+              'flex h-12 w-12 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm transition-all',
+              'opacity-0 group-hover:opacity-100',
+              isPlaying && 'opacity-0 group-hover:opacity-100'
+            )}
+          >
             {isPlaying ? (
-              <Pause className="w-5 h-5 text-white" />
+              <Pause className="h-5 w-5 text-white" />
             ) : (
-              <Play className="w-5 h-5 text-white ml-0.5" />
+              <Play className="ml-0.5 h-5 w-5 text-white" />
             )}
           </div>
         </button>
       </div>
 
-      <div className="w-full flex flex-col gap-2">
+      <div className="flex w-full flex-col gap-2">
         <div
-          className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden cursor-pointer"
+          className="h-1.5 w-full cursor-pointer overflow-hidden rounded-full bg-white/20"
           onClick={handleSeek}
           role="slider"
           aria-label="Video progress"
@@ -90,7 +92,7 @@ export default function ClipPreview({ clip }) {
           aria-valuemax={100}
         >
           <div
-            className="h-full bg-[#2874F0] rounded-full transition-all duration-100"
+            className="bg-primary h-full rounded-full transition-all duration-100"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -98,13 +100,17 @@ export default function ClipPreview({ clip }) {
         <div className="flex items-center justify-between">
           <button
             onClick={handleToggleMute}
-            className="p-1 rounded text-white/40 hover:text-white transition-colors"
+            className="rounded p-1 text-white/40 transition-colors hover:text-white"
             aria-label={isMuted ? 'Unmute' : 'Mute'}
           >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {isMuted ? (
+              <VolumeX className="h-3.5 w-3.5" />
+            ) : (
+              <Volume2 className="h-3.5 w-3.5" />
+            )}
           </button>
 
-          <span className="text-[11px] text-white/40 font-medium">
+          <span className="text-[11px] font-medium text-white/40">
             {formatDuration(duration)}
           </span>
         </div>

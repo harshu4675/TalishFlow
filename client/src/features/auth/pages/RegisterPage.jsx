@@ -15,14 +15,14 @@ export default function RegisterPage() {
     <div className="flex flex-col gap-8">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-[28px] font-extrabold text-[#212121] tracking-tight">
+        <h1 className="text-foreground text-[28px] font-extrabold tracking-tight">
           Create your account
         </h1>
-        <p className="text-[#878787] text-sm">
+        <p className="text-foreground-muted text-sm">
           Already have an account?{' '}
           <Link
             to={ROUTES.LOGIN}
-            className="text-[#2874F0] font-semibold hover:text-[#2874F0]-hover transition-colors"
+            className="text-primary hover:text-primary-hover font-semibold transition-colors"
           >
             Sign in
           </Link>
