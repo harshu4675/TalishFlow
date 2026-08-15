@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
-import { apiClient } from '@/services/api'
-import { useAuthContext } from '@/context/AuthContext'
-import { useNotificationContext } from '@/context/NotificationContext'
-import { cn } from '@/utils/cn'
+import { Loader2, BellRing } from 'lucide-react'
+import { settingsService } from '@/services/settingsService'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { useNotificationContext } from '@/contexts/NotificationContext'
+import Switch from '@/components/ui/switch'
 
 const NOTIFICATION_OPTIONS = [
   {
@@ -29,29 +29,6 @@ const NOTIFICATION_OPTIONS = [
   },
 ]
 
-function Toggle({ enabled, onChange }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      onClick={() => onChange(!enabled)}
-      className={cn(
-        'relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-        enabled ? 'bg-[#2874F0]' : 'bg-border'
-      )}
-    >
-      <span
-        className={cn(
-          'inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-          enabled ? 'translate-x-6' : 'translate-x-1'
-        )}
-      />
-    </button>
-  )
-}
-
 export default function NotificationSettings() {
   const { user, updateUser } = useAuthContext()
   const { success, error } = useNotificationContext()
@@ -65,12 +42,8 @@ export default function NotificationSettings() {
   )
 
   const saveMutation = useMutation({
-    mutationFn: async (prefs) => {
-      const response = await apiClient.patch('/settings/profile', {
-        preferences: { notifications: prefs },
-      })
-      return response.data.data.user
-    },
+    mutationFn: (prefs) =>
+      settingsService.updateProfile({ preferences: { notifications: prefs } }),
     onSuccess: (updatedUser) => {
       updateUser(updatedUser)
       success('Preferences saved', 'Your notification settings have been updated.')
@@ -88,35 +61,46 @@ export default function NotificationSettings() {
 
   return (
     <div>
-      <div className="px-6 py-5 border-b border-[#E0E0E0]">
-        <h2 className="text-[15px] font-bold text-[#212121]">Notifications</h2>
-        <p className="text-xs text-[#878787] mt-0.5">
+      <div className="border-border-subtle border-b px-6 py-5">
+        <h2 className="text-foreground text-[15px] font-bold">Notifications</h2>
+        <p className="text-foreground-muted mt-0.5 text-xs">
           Choose what you want to be notified about.
         </p>
       </div>
 
-      <div className="px-6 py-6 flex flex-col gap-4">
+      <div className="flex flex-col gap-3 px-6 py-6">
         {NOTIFICATION_OPTIONS.map((option) => (
           <div
             key={option.key}
-            className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[#F8F9FA] border border-[#E0E0E0]"
+            className="border-border-subtle bg-surface-muted/60 flex items-center justify-between gap-4 rounded-xl border px-4 py-3.5"
           >
-            <div>
-              <p className="text-sm font-semibold text-[#212121]">{option.label}</p>
-              <p className="text-xs text-[#878787] mt-0.5">{option.description}</p>
+            <div className="min-w-0">
+              <p className="text-foreground text-sm font-semibold">{option.label}</p>
+              <p className="text-foreground-muted mt-0.5 text-xs">{option.description}</p>
             </div>
-
-            <Toggle
-              enabled={preferences[option.key] ?? true}
-              onChange={(value) => handleToggle(option.key, value)}
+            <Switch
+              checked={preferences[option.key] ?? true}
+              onCheckedChange={(value) => handleToggle(option.key, value)}
+              disabled={saveMutation.isPending}
+              aria-label={`Toggle ${option.label}`}
             />
           </div>
         ))}
 
         {saveMutation.isPending && (
-          <div className="flex items-center gap-2 text-xs text-[#878787]">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <div
+            className="text-foreground-muted flex items-center gap-2 text-xs font-semibold"
+            role="status"
+          >
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
             Saving...
+          </div>
+        )}
+
+        {!saveMutation.isPending && (
+          <div className="text-foreground-faint mt-1 flex items-center gap-2 text-xs">
+            <BellRing className="h-3.5 w-3.5" aria-hidden="true" />
+            Changes are saved automatically.
           </div>
         )}
       </div>

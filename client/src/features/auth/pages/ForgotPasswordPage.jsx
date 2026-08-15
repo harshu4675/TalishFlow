@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import ForgotPasswordForm from '../components/ForgotPasswordForm'
-import authService from '../services/authService'
-import { useNotificationContext } from '@/context/NotificationContext'
+import authService from '@/services/authService'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { ROUTES } from '@/utils/constants'
 
 export default function ForgotPasswordPage() {
@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
     try {
       await authService.forgotPassword(data.email)
       setIsSuccess(true)
-    } catch (err) {
+    } catch {
       error('Request failed', 'Unable to send reset email. Please try again.')
     } finally {
       setIsLoading(false)
@@ -29,16 +29,16 @@ export default function ForgotPasswordPage() {
       <div className="flex flex-col gap-2">
         <Link
           to={ROUTES.LOGIN}
-          className="flex items-center gap-1.5 text-[#878787] hover:text-[#212121] transition-colors text-sm font-medium w-fit mb-2"
+          className="text-foreground-muted hover:text-foreground mb-2 flex w-fit items-center gap-1.5 text-sm font-medium transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="h-4 w-4" />
           Back to sign in
         </Link>
-        <h1 className="text-[28px] font-extrabold text-[#212121] tracking-tight">
+        <h1 className="text-foreground text-[28px] font-extrabold tracking-tight">
           Forgot password?
         </h1>
         {!isSuccess && (
-          <p className="text-[#878787] text-sm leading-relaxed">
+          <p className="text-foreground-muted text-sm leading-relaxed">
             Enter your email address and we'll send you a link to reset your password.
           </p>
         )}

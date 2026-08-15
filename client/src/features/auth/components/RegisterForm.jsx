@@ -2,29 +2,30 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react'
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/utils/cn'
 
-const schema = z.object({
-  name: z
-    .string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(60, 'Name cannot exceed 60 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain an uppercase letter')
-    .regex(/[a-z]/, 'Must contain a lowercase letter')
-    .regex(/[0-9]/, 'Must contain a number'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-})
+const schema = z
+  .object({
+    name: z
+      .string()
+      .min(2, 'Name must be at least 2 characters')
+      .max(60, 'Name cannot exceed 60 characters'),
+    email: z.string().email('Please enter a valid email address'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Must contain an uppercase letter')
+      .regex(/[a-z]/, 'Must contain a lowercase letter')
+      .regex(/[0-9]/, 'Must contain a number'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
 
-// Password strength indicator
 const passwordRules = [
   { label: 'At least 8 characters', test: (p) => p.length >= 8 },
   { label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
@@ -39,9 +40,9 @@ function PasswordStrengthIndicator({ password }) {
   const strength = passed / passwordRules.length
 
   const getColor = () => {
-    if (strength < 0.5) return 'bg-[#EF4444]'
-    if (strength < 0.75) return 'bg-[#F59E0B]'
-    return 'bg-[#22C55E]'
+    if (strength < 0.5) return 'bg-error'
+    if (strength < 0.75) return 'bg-warning'
+    return 'bg-success'
   }
 
   const getLabel = () => {
@@ -55,11 +56,11 @@ function PasswordStrengthIndicator({ password }) {
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
-      className="flex flex-col gap-2 mt-2"
+      className="mt-2 flex flex-col gap-2"
     >
       {/* Strength bar */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 flex gap-1">
+        <div className="flex flex-1 gap-1">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
@@ -70,7 +71,9 @@ function PasswordStrengthIndicator({ password }) {
             />
           ))}
         </div>
-        <span className="text-xs text-[#878787] font-medium w-10">{getLabel()}</span>
+        <span className="text-foreground-muted w-10 text-xs font-medium">
+          {getLabel()}
+        </span>
       </div>
 
       {/* Rules */}
@@ -80,14 +83,14 @@ function PasswordStrengthIndicator({ password }) {
           return (
             <div key={i} className="flex items-center gap-1.5">
               {passes ? (
-                <Check className="w-3 h-3 text-[#22C55E] flex-shrink-0" />
+                <Check className="text-success h-3 w-3 flex-shrink-0" />
               ) : (
-                <X className="w-3 h-3 text-[#878787] flex-shrink-0" />
+                <X className="text-foreground-muted h-3 w-3 flex-shrink-0" />
               )}
               <span
                 className={cn(
                   'text-[11px]',
-                  passes ? 'text-[#22C55E]' : 'text-[#878787]'
+                  passes ? 'text-success' : 'text-foreground-muted'
                 )}
               >
                 {rule.label}
@@ -103,7 +106,6 @@ function PasswordStrengthIndicator({ password }) {
 export default function RegisterForm({ onSubmit, isLoading }) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [passwordValue, setPasswordValue] = useState('')
 
   const {
     register,
@@ -120,20 +122,20 @@ export default function RegisterForm({ onSubmit, isLoading }) {
   const fieldClass = (hasError) =>
     cn(
       'w-full px-4 py-3 rounded-xl text-sm',
-      'bg-[#F8F9FA] border transition-all duration-150',
-      'text-[#212121] placeholder:text-[#878787]',
-      'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-[#2874F0]',
+      'bg-surface-muted border transition-all duration-150',
+      'text-foreground placeholder:text-foreground-muted',
+      'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       hasError
-        ? 'border-[#FF6161] focus:ring-danger/30 focus:border-[#FF6161]'
-        : 'border-[#E0E0E0] hover:border-[#2874F0]/30'
+        ? 'border-error focus:ring-danger/30 focus:border-error'
+        : 'border-border hover:border-primary/30'
     )
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
       {/* Name */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="name" className="text-sm font-semibold text-[#212121]">
+        <label htmlFor="name" className="text-foreground text-sm font-semibold">
           Full name
         </label>
         <input
@@ -149,7 +151,7 @@ export default function RegisterForm({ onSubmit, isLoading }) {
           <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-xs text-[#EF4444] font-medium"
+            className="text-error text-xs font-medium"
             role="alert"
           >
             {errors.name.message}
@@ -159,7 +161,7 @@ export default function RegisterForm({ onSubmit, isLoading }) {
 
       {/* Email */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-semibold text-[#212121]">
+        <label htmlFor="email" className="text-foreground text-sm font-semibold">
           Email address
         </label>
         <input
@@ -175,7 +177,7 @@ export default function RegisterForm({ onSubmit, isLoading }) {
           <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-xs text-[#EF4444] font-medium"
+            className="text-error text-xs font-medium"
             role="alert"
           >
             {errors.email.message}
@@ -185,7 +187,7 @@ export default function RegisterForm({ onSubmit, isLoading }) {
 
       {/* Password */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-semibold text-[#212121]">
+        <label htmlFor="password" className="text-foreground text-sm font-semibold">
           Password
         </label>
         <div className="relative">
@@ -195,19 +197,17 @@ export default function RegisterForm({ onSubmit, isLoading }) {
             autoComplete="new-password"
             placeholder="Create a strong password"
             disabled={isLoading}
-            {...register('password', {
-              onChange: (e) => setPasswordValue(e.target.value),
-            })}
+            {...register('password')}
             className={cn(fieldClass(!!errors.password), 'pr-11')}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             disabled={isLoading}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#878787] hover:text-[#212121] transition-colors"
+            className="text-foreground-muted hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
 
@@ -220,7 +220,7 @@ export default function RegisterForm({ onSubmit, isLoading }) {
           <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-xs text-[#EF4444] font-medium"
+            className="text-error text-xs font-medium"
             role="alert"
           >
             {errors.password.message}
@@ -230,7 +230,10 @@ export default function RegisterForm({ onSubmit, isLoading }) {
 
       {/* Confirm Password */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="confirmPassword" className="text-sm font-semibold text-[#212121]">
+        <label
+          htmlFor="confirmPassword"
+          className="text-foreground text-sm font-semibold"
+        >
           Confirm password
         </label>
         <div className="relative">
@@ -247,17 +250,17 @@ export default function RegisterForm({ onSubmit, isLoading }) {
             type="button"
             onClick={() => setShowConfirm(!showConfirm)}
             disabled={isLoading}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#878787] hover:text-[#212121] transition-colors"
+            className="text-foreground-muted hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 p-1 transition-colors"
             aria-label={showConfirm ? 'Hide password' : 'Show password'}
           >
-            {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
         {errors.confirmPassword && (
           <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-xs text-[#EF4444] font-medium"
+            className="text-error text-xs font-medium"
             role="alert"
           >
             {errors.confirmPassword.message}
@@ -266,13 +269,13 @@ export default function RegisterForm({ onSubmit, isLoading }) {
       </div>
 
       {/* Terms */}
-      <p className="text-xs text-[#878787] leading-relaxed">
+      <p className="text-foreground-muted text-xs leading-relaxed">
         By creating an account, you agree to our{' '}
-        <a href="#" className="text-[#2874F0] hover:underline font-medium">
+        <a href="#" className="text-primary font-medium hover:underline">
           Terms of Service
         </a>{' '}
         and{' '}
-        <a href="#" className="text-[#2874F0] hover:underline font-medium">
+        <a href="#" className="text-primary font-medium hover:underline">
           Privacy Policy
         </a>
         .
@@ -285,18 +288,18 @@ export default function RegisterForm({ onSubmit, isLoading }) {
         whileHover={{ scale: isLoading ? 1 : 1.01 }}
         whileTap={{ scale: isLoading ? 1 : 0.99 }}
         className={cn(
-          'w-full flex items-center justify-center gap-2',
-          'py-3 px-6 rounded-xl',
-          'bg-[#2874F0] hover:bg-[#1B5FCC]',
-          'text-white text-sm font-semibold',
-          'transition-all duration-200 shadow-md hover:shadow-lg',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
-          'disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none'
+          'flex w-full items-center justify-center gap-2',
+          'rounded-xl px-6 py-3',
+          'bg-primary hover:bg-primary-hover',
+          'text-sm font-semibold text-white',
+          'shadow-md transition-all duration-200 hover:shadow-lg',
+          'focus-visible:ring-primary/50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+          'disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none'
         )}
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
             Creating account...
           </>
         ) : (

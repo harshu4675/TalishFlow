@@ -1,22 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, CheckCircle2, AlertCircle, Clock, X } from 'lucide-react'
-import { apiClient } from '@/services/api'
+import { Loader2, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
+import { processingService } from '@/services/processingService'
+import { queryKeys } from '@/utils/queryKeys'
 import { PROCESSING_STATUS, PROCESSING_STATUS_LABELS } from '@/utils/constants'
 import { formatRelativeTime } from '@/utils/formatters'
-import { cn } from '@/utils/cn'
 import EmptyState from '@/components/common/EmptyState'
-
-async function fetchQueue() {
-  const response = await apiClient.get('/processing/queue')
-  return response.data.data
-}
 
 function ProgressBar({ progress }) {
   return (
-    <div className="h-1.5 w-full bg-[#F8F9FA] rounded-full overflow-hidden">
+    <div className="bg-surface-muted h-1.5 w-full overflow-hidden rounded-full">
       <motion.div
-        className="h-full rounded-full bg-[#2874F0]"
+        className="bg-primary h-full rounded-full"
         initial={{ width: 0 }}
         animate={{ width: `${progress || 0}%` }}
         transition={{ ease: 'linear', duration: 0.5 }}
@@ -47,46 +42,43 @@ function QueueItem({ job, index }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.3, delay: index * 0.04 }}
-      className="flex items-start gap-4 p-4 rounded-xl bg-[#F8F9FA] border border-[#E0E0E0]"
+      className="bg-surface-muted border-border flex items-start gap-4 rounded-xl border p-4"
     >
-      <div className="flex-shrink-0 mt-0.5">
+      <div className="mt-0.5 flex-shrink-0">
         {isActive && (
-          <div className="w-8 h-8 rounded-xl bg-[#2874F0]/10 flex items-center justify-center">
-            <Loader2
-              className="w-4 h-4 text-[#2874F0] animate-spin"
-              aria-hidden="true"
-            />
+          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-xl">
+            <Loader2 className="text-primary h-4 w-4 animate-spin" aria-hidden="true" />
           </div>
         )}
         {isComplete && (
-          <div className="w-8 h-8 rounded-xl bg-[#22C55E]/10 flex items-center justify-center">
-            <CheckCircle2 className="w-4 h-4 text-[#22C55E]" aria-hidden="true" />
+          <div className="bg-success/10 flex h-8 w-8 items-center justify-center rounded-xl">
+            <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
           </div>
         )}
         {isFailed && (
-          <div className="w-8 h-8 rounded-xl bg-[#EF4444]/10 flex items-center justify-center">
-            <AlertCircle className="w-4 h-4 text-[#EF4444]" aria-hidden="true" />
+          <div className="bg-error/10 flex h-8 w-8 items-center justify-center rounded-xl">
+            <AlertCircle className="text-error h-4 w-4" aria-hidden="true" />
           </div>
         )}
         {job.status === PROCESSING_STATUS.PENDING && (
-          <div className="w-8 h-8 rounded-xl bg-[#F8F9FA] border border-[#E0E0E0] flex items-center justify-center">
-            <Clock className="w-4 h-4 text-[#878787]" aria-hidden="true" />
+          <div className="bg-surface-muted border-border flex h-8 w-8 items-center justify-center rounded-xl border">
+            <Clock className="text-foreground-muted h-4 w-4" aria-hidden="true" />
           </div>
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-sm font-semibold text-[#212121] truncate">
+            <p className="text-foreground truncate text-sm font-semibold">
               {job.videoTitle || 'Processing Video'}
             </p>
-            <p className="text-xs text-[#878787] mt-0.5">
+            <p className="text-foreground-muted mt-0.5 text-xs">
               {PROCESSING_STATUS_LABELS[job.status] || 'Processing'}
               {job.progress > 0 && ` · ${job.progress}%`}
             </p>
           </div>
-          <span className="text-[11px] text-[#878787] flex-shrink-0">
+          <span className="text-foreground-muted flex-shrink-0 text-[11px]">
             {formatRelativeTime(job.createdAt)}
           </span>
         </div>
@@ -98,7 +90,7 @@ function QueueItem({ job, index }) {
         )}
 
         {isFailed && job.errorMessage && (
-          <p className="text-xs text-[#EF4444] mt-2 leading-relaxed">{job.errorMessage}</p>
+          <p className="text-error mt-2 text-xs leading-relaxed">{job.errorMessage}</p>
         )}
       </div>
     </motion.div>
@@ -107,12 +99,12 @@ function QueueItem({ job, index }) {
 
 function QueueSkeleton() {
   return (
-    <div className="flex items-start gap-4 p-4 rounded-xl bg-[#F8F9FA] border border-[#E0E0E0]">
-      <div className="w-8 h-8 rounded-xl skeleton flex-shrink-0" />
-      <div className="flex-1 flex flex-col gap-2">
-        <div className="h-3.5 w-40 skeleton rounded-lg" />
-        <div className="h-3 w-24 skeleton rounded-lg" />
-        <div className="h-1.5 w-full skeleton rounded-full mt-1" />
+    <div className="bg-surface-muted border-border flex items-start gap-4 rounded-xl border p-4">
+      <div className="skeleton h-8 w-8 flex-shrink-0 rounded-xl" />
+      <div className="flex flex-1 flex-col gap-2">
+        <div className="skeleton h-3.5 w-40 rounded-lg" />
+        <div className="skeleton h-3 w-24 rounded-lg" />
+        <div className="skeleton mt-1 h-1.5 w-full rounded-full" />
       </div>
     </div>
   )
@@ -120,8 +112,8 @@ function QueueSkeleton() {
 
 export default function ProcessingQueue() {
   const { data, isLoading } = useQuery({
-    queryKey: ['processing', 'queue'],
-    queryFn: fetchQueue,
+    queryKey: queryKeys.dashboard.processingQueue,
+    queryFn: processingService.getQueue,
     staleTime: 1000 * 15,
     refetchInterval: 1000 * 10,
   })
@@ -132,23 +124,25 @@ export default function ProcessingQueue() {
   if (!isLoading && activeJobs.length === 0) return null
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E0E0E0]">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#E0E0E0]">
+    <div className="bg-surface border-border rounded-2xl border">
+      <div className="border-border flex items-center justify-between border-b px-5 py-4">
         <div>
-          <h2 className="text-[15px] font-bold text-[#212121]">Processing Queue</h2>
-          <p className="text-xs text-[#878787] mt-0.5">
-            {isLoading ? 'Loading...' : `${activeJobs.length} job${activeJobs.length !== 1 ? 's' : ''} in progress`}
+          <h2 className="text-foreground text-[15px] font-bold">Processing Queue</h2>
+          <p className="text-foreground-muted mt-0.5 text-xs">
+            {isLoading
+              ? 'Loading...'
+              : `${activeJobs.length} job${activeJobs.length !== 1 ? 's' : ''} in progress`}
           </p>
         </div>
         {activeJobs.length > 0 && (
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-[#2874F0] animate-pulse" />
-            <span className="text-xs font-semibold text-[#2874F0]">Processing</span>
+            <div className="bg-primary h-2 w-2 animate-pulse rounded-full" />
+            <span className="text-primary text-xs font-semibold">Processing</span>
           </div>
         )}
       </div>
 
-      <div className="p-4 flex flex-col gap-3">
+      <div className="flex flex-col gap-3 p-4">
         {isLoading ? (
           Array.from({ length: 2 }).map((_, i) => <QueueSkeleton key={i} />)
         ) : (

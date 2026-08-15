@@ -29,7 +29,7 @@ export default function YoutubeUrlInput({ onSubmit, isLoading }) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="relative">
         <Link2
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#878787]"
+          className="text-foreground-muted absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2"
           aria-hidden="true"
         />
 
@@ -43,18 +43,18 @@ export default function YoutubeUrlInput({ onSubmit, isLoading }) {
           type="url"
           placeholder="https://www.youtube.com/watch?v=..."
           className={cn(
-            'w-full py-3 pl-11 pr-4 rounded-xl text-sm',
-            'bg-[#F8F9FA] border text-[#212121] placeholder:text-[#878787]',
+            'w-full rounded-xl py-3 pr-4 pl-11 text-sm',
+            'bg-surface-muted text-foreground placeholder:text-foreground-muted border',
             'transition-all duration-150 outline-none',
-            'focus:ring-2 focus:ring-primary/30 focus:border-[#2874F0]',
-            error ? 'border-[#FF6161]' : 'border-[#E0E0E0] hover:border-[#2874F0]/30',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
+            'focus:ring-primary/30 focus:border-primary focus:ring-2',
+            error ? 'border-error' : 'border-border hover:border-primary/30',
+            'disabled:cursor-not-allowed disabled:opacity-50'
           )}
         />
       </div>
 
       {error && (
-        <p className="text-xs text-[#EF4444] font-medium -mt-1" role="alert">
+        <p className="text-error -mt-1 text-xs font-medium" role="alert">
           {error}
         </p>
       )}
@@ -63,26 +63,26 @@ export default function YoutubeUrlInput({ onSubmit, isLoading }) {
         type="submit"
         disabled={isLoading}
         className={cn(
-          'w-full flex items-center justify-center gap-2 py-3 rounded-xl',
-          'bg-[#2874F0] hover:bg-[#1B5FCC] text-white text-sm font-semibold',
-          'transition-all duration-150 shadow-md shadow-primary/20',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
+          'flex w-full items-center justify-center gap-2 rounded-xl py-3',
+          'bg-primary hover:bg-primary-hover text-sm font-semibold text-white',
+          'shadow-primary/20 shadow-md transition-all duration-150',
+          'disabled:cursor-not-allowed disabled:opacity-50'
         )}
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
             Adding YouTube video...
           </>
         ) : (
           <>
             Process YouTube Video
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="h-4 w-4" />
           </>
         )}
       </button>
 
-      <p className="text-xs text-[#878787] text-center leading-relaxed">
+      <p className="text-foreground-muted text-center text-xs leading-relaxed">
         Only publicly accessible YouTube videos can be imported.
       </p>
     </form>

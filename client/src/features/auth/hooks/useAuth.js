@@ -1,5 +1,5 @@
-import { useAuthContext } from '@/context/AuthContext'
-import { useNotificationContext } from '@/context/NotificationContext'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/utils/constants'
 

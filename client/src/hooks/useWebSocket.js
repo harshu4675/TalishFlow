@@ -1,11 +1,16 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { io } from 'socket.io-client'
-import { useAuthContext } from '@/context/AuthContext'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 export default function useProcessingSocket(handlers = {}) {
   const { isAuthenticated } = useAuthContext()
   const socketRef = useRef(null)
   const [isConnected, setIsConnected] = useState(false)
+  const handlersRef = useRef(handlers)
+
+  useEffect(() => {
+    handlersRef.current = handlers
+  }, [handlers])
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -23,20 +28,19 @@ export default function useProcessingSocket(handlers = {}) {
     socket.on('connect', () => setIsConnected(true))
     socket.on('disconnect', () => setIsConnected(false))
 
-    if (handlers.onProcessingProgress) {
-      socket.on('processing:progress', handlers.onProcessingProgress)
-    }
+    const currentHandlers = handlersRef.current
 
-    if (handlers.onProcessingComplete) {
-      socket.on('processing:complete', handlers.onProcessingComplete)
+    if (currentHandlers.onProcessingProgress) {
+      socket.on('processing:progress', currentHandlers.onProcessingProgress)
     }
-
-    if (handlers.onProcessingError) {
-      socket.on('processing:error', handlers.onProcessingError)
+    if (currentHandlers.onProcessingComplete) {
+      socket.on('processing:complete', currentHandlers.onProcessingComplete)
     }
-
-    if (handlers.onUploadProgress) {
-      socket.on('upload:progress', handlers.onUploadProgress)
+    if (currentHandlers.onProcessingError) {
+      socket.on('processing:error', currentHandlers.onProcessingError)
+    }
+    if (currentHandlers.onUploadProgress) {
+      socket.on('upload:progress', currentHandlers.onUploadProgress)
     }
 
     return () => {

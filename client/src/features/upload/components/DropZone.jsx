@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { UploadCloud, FileVideo, AlertCircle } from 'lucide-react'
+import { UploadCloud, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { formatFileSize } from '@/utils/formatters'
 import { UPLOAD_CONFIG } from '@/utils/constants'
@@ -15,12 +15,7 @@ export default function DropZone({ onFilesSelected, disabled = false }) {
     [onFilesSelected]
   )
 
-  const {
-    getRootProps,
-    getInputProps,
-    isDragActive,
-    fileRejections,
-  } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     disabled,
     multiple: true,
@@ -34,11 +29,11 @@ export default function DropZone({ onFilesSelected, disabled = false }) {
         {...getRootProps()}
         className={cn(
           'relative min-h-[240px] rounded-2xl border-2 border-dashed',
-          'flex flex-col items-center justify-center text-center p-8 cursor-pointer',
+          'flex cursor-pointer flex-col items-center justify-center p-8 text-center',
           'transition-all duration-200 outline-none',
           isDragActive
-            ? 'border-[#2874F0] bg-[#2874F0]/5 scale-[1.01]'
-            : 'border-[#E0E0E0] bg-[#F8F9FA] hover:border-[#2874F0]/50 hover:bg-[#2874F0]/[0.03]',
+            ? 'border-primary bg-primary/5 scale-[1.01]'
+            : 'border-border bg-surface-muted hover:border-primary/50 hover:bg-primary/[0.03]',
           disabled && 'cursor-not-allowed opacity-60'
         )}
       >
@@ -46,37 +41,47 @@ export default function DropZone({ onFilesSelected, disabled = false }) {
 
         <div
           className={cn(
-            'w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all duration-200',
-            isDragActive ? 'bg-[#2874F0] text-white scale-110' : 'bg-[#2874F0]/10 text-[#2874F0]'
+            'mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-200',
+            isDragActive
+              ? 'bg-primary scale-110 text-white'
+              : 'bg-primary/10 text-primary'
           )}
         >
-          <UploadCloud className="w-6 h-6" aria-hidden="true" />
+          <UploadCloud className="h-6 w-6" aria-hidden="true" />
         </div>
 
-        <p className="text-[15px] font-bold text-[#212121]">
+        <p className="text-foreground text-[15px] font-bold">
           {isDragActive ? 'Drop videos here' : 'Drag and drop your videos'}
         </p>
 
-        <p className="text-sm text-[#878787] mt-1.5">
-          or <span className="text-[#2874F0] font-semibold">browse your device</span>
+        <p className="text-foreground-muted mt-1.5 text-sm">
+          or <span className="text-primary font-semibold">browse your device</span>
         </p>
 
-        <div className="flex items-center gap-2 mt-5 text-[11px] text-[#878787]">
-          <span className="px-2 py-1 rounded-md bg-white border border-[#E0E0E0]">MP4</span>
-          <span className="px-2 py-1 rounded-md bg-white border border-[#E0E0E0]">MOV</span>
-          <span className="px-2 py-1 rounded-md bg-white border border-[#E0E0E0]">MKV</span>
-          <span className="px-2 py-1 rounded-md bg-white border border-[#E0E0E0]">AVI</span>
+        <div className="text-foreground-muted mt-5 flex items-center gap-2 text-[11px]">
+          <span className="bg-surface border-border rounded-md border px-2 py-1">
+            MP4
+          </span>
+          <span className="bg-surface border-border rounded-md border px-2 py-1">
+            MOV
+          </span>
+          <span className="bg-surface border-border rounded-md border px-2 py-1">
+            MKV
+          </span>
+          <span className="bg-surface border-border rounded-md border px-2 py-1">
+            AVI
+          </span>
           <span>Up to {formatFileSize(UPLOAD_CONFIG.MAX_FILE_SIZE)}</span>
         </div>
       </div>
 
       {fileRejections.length > 0 && (
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#EF4444]/10 border border-[#FF6161]/20">
-          <AlertCircle className="w-4 h-4 text-[#EF4444] mt-0.5 flex-shrink-0" />
+        <div className="bg-error/10 border-error/20 flex items-start gap-2.5 rounded-xl border p-3">
+          <AlertCircle className="text-error mt-0.5 h-4 w-4 flex-shrink-0" />
           <div>
-            <p className="text-xs font-bold text-[#EF4444]">Some files could not be added</p>
+            <p className="text-error text-xs font-bold">Some files could not be added</p>
             {fileRejections.map(({ file, errors }) => (
-              <p key={file.name} className="text-xs text-[#EF4444]/80 mt-1">
+              <p key={file.name} className="text-error/80 mt-1 text-xs">
                 {file.name}: {errors[0]?.message}
               </p>
             ))}

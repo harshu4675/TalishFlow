@@ -1,11 +1,11 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useState } from 'react'
 import { CheckCircle2, AlertTriangle } from 'lucide-react'
-import { motion } from 'framer-motion'
 import ResetPasswordForm from '../components/ResetPasswordForm'
-import authService from '../services/authService'
-import { useNotificationContext } from '@/context/NotificationContext'
+import authService from '@/services/authService'
+import { useNotificationContext } from '@/contexts/NotificationContext'
 import { ROUTES } from '@/utils/constants'
+import { motion } from 'framer-motion'
 
 export default function ResetPasswordPage() {
   const { token } = useParams()
@@ -43,18 +43,18 @@ export default function ResetPasswordPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center py-4"
+          className="py-4 text-center"
         >
-          <div className="w-14 h-14 rounded-2xl bg-[#EF4444]/10 flex items-center justify-center mx-auto mb-5">
-            <AlertTriangle className="w-6 h-6 text-[#EF4444]" />
+          <div className="bg-error/10 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
+            <AlertTriangle className="text-error h-6 w-6" />
           </div>
-          <h3 className="text-lg font-bold text-[#212121] mb-2">Link expired</h3>
-          <p className="text-[#878787] text-sm leading-relaxed mb-6">
+          <h3 className="text-foreground mb-2 text-lg font-bold">Link expired</h3>
+          <p className="text-foreground-muted mb-6 text-sm leading-relaxed">
             This password reset link is invalid or has expired. Please request a new one.
           </p>
           <Link
             to={ROUTES.FORGOT_PASSWORD}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#2874F0] text-white text-sm font-semibold hover:bg-[#1B5FCC] transition-all"
+            className="bg-primary hover:bg-primary-hover inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all"
           >
             Request new link
           </Link>
@@ -68,15 +68,13 @@ export default function ResetPasswordPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="text-center py-4"
+        className="py-4 text-center"
       >
-        <div className="w-14 h-14 rounded-2xl bg-[#22C55E]/10 flex items-center justify-center mx-auto mb-5">
-          <CheckCircle2 className="w-6 h-6 text-[#22C55E]" />
+        <div className="bg-success/10 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
+          <CheckCircle2 className="text-success h-6 w-6" />
         </div>
-        <h3 className="text-lg font-bold text-[#212121] mb-2">Password reset!</h3>
-        <p className="text-[#878787] text-sm">
-          Redirecting you to sign in...
-        </p>
+        <h3 className="text-foreground mb-2 text-lg font-bold">Password reset!</h3>
+        <p className="text-foreground-muted text-sm">Redirecting you to sign in...</p>
       </motion.div>
     )
   }
@@ -84,10 +82,10 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-[28px] font-extrabold text-[#212121] tracking-tight">
+        <h1 className="text-foreground text-[28px] font-extrabold tracking-tight">
           Reset your password
         </h1>
-        <p className="text-[#878787] text-sm">
+        <p className="text-foreground-muted text-sm">
           Create a strong new password for your account.
         </p>
       </div>
