@@ -6,14 +6,12 @@ const processingJobSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     videoId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Video",
       required: true,
-      index: true,
     },
 
     bullJobId: String,
@@ -37,7 +35,6 @@ const processingJobSchema = new mongoose.Schema(
         "failed",
       ],
       default: "pending",
-      index: true,
     },
 
     progress: {

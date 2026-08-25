@@ -8,16 +8,12 @@ import {
   Settings,
   Upload,
   Link2,
-  Moon,
-  Sun,
   Video,
   Scissors,
   Search,
   CornerDownLeft,
-  Zap,
 } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { useThemeContext } from '@/contexts/ThemeContext'
 import { ROUTES } from '@/utils/constants'
 import { queryKeys } from '@/utils/queryKeys'
 import { cn } from '@/utils/cn'
@@ -30,7 +26,6 @@ function openUpload(tab = 'upload') {
 export default function CommandMenu({ open, onOpenChange }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isDark, toggleTheme } = useThemeContext()
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const listRef = useRef(null)
@@ -83,13 +78,6 @@ export default function CommandMenu({ open, onOpenChange }) {
         icon: Link2,
         action: () => openUpload('youtube-url'),
       },
-      {
-        id: 'act-theme',
-        label: isDark ? 'Switch to light mode' : 'Switch to dark mode',
-        hint: 'Appearance',
-        icon: isDark ? Sun : Moon,
-        action: toggleTheme,
-      },
     ]
 
     const recent = [
@@ -117,7 +105,7 @@ export default function CommandMenu({ open, onOpenChange }) {
       { label: 'Actions', items: filter(actions) },
       ...(recent.length ? [{ label: 'Recent content', items: filter(recent) }] : []),
     ].filter((g) => g.items.length > 0)
-  }, [query, isDark, toggleTheme, navigate, queryClient])
+  }, [query, navigate, queryClient])
 
   const flatItems = groups.flatMap((g) => g.items)
 

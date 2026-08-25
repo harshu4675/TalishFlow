@@ -1,43 +1,60 @@
 import { createClient } from "redis";
 import { env } from "./env.js";
 import logger from "../utils/logger.js";
+import { bindRedisClient } from "../services/keyValueStore.js";
 
 let redisClient = null;
 
+/**
+ * Connect to Redis. Returns the connected client, or `null` when Redis
+ * is unreachable. A missing Redis must never prevent the API from
+ * booting — the app falls back to in-memory state and a local job
+ * runner in that case (development convenience).
+ */
 export async function connectRedis() {
   if (redisClient?.isReady) return redisClient;
 
-  redisClient = createClient({
+  const client = createClient({
     url: env.REDIS_URL,
     socket: {
       reconnectStrategy: (retries) => {
-        if (retries > 10) {
-          logger.error("Redis: Max reconnection attempts reached");
+        if (retries > 5) {
           return new Error("Redis max reconnection attempts reached");
         }
-        return Math.min(retries * 100, 3000);
+        return Math.min(retries * 250, 2000);
       },
+      connectTimeout: 2500,
       tls: env.REDIS_URL?.startsWith("rediss://") ? true : undefined,
     },
   });
 
-  redisClient.on("connect", () => logger.info("Redis: Connecting..."));
-  redisClient.on("ready", () => logger.info("Redis: Ready"));
-  redisClient.on("error", (err) =>
+  client.on("ready", () => logger.info("Redis: Ready"));
+  client.on("error", (err) =>
     logger.error("Redis: Error", { error: err.message }),
   );
-  redisClient.on("reconnecting", () => logger.warn("Redis: Reconnecting..."));
 
-  await redisClient.connect();
-
-  return redisClient;
+  try {
+    await client.connect();
+    redisClient = client;
+    bindRedisClient(client);
+    return redisClient;
+  } catch (error) {
+    logger.warn(
+      `Redis: Connection failed (${error.message}). Continuing without Redis.`,
+    );
+    try {
+      await client.disconnect();
+    } catch {
+      /* already closed */
+    }
+    redisClient = null;
+    bindRedisClient(null);
+    return null;
+  }
 }
 
 export function getRedisClient() {
-  if (!redisClient?.isReady) {
-    throw new Error("Redis client not initialized. Call connectRedis() first.");
-  }
-  return redisClient;
+  return redisClient?.isReady ? redisClient : null;
 }
 
 export async function disconnectRedis() {

@@ -4,13 +4,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   Menu,
   Bell,
-  Sun,
-  Moon,
   LogOut,
   Settings,
   User,
   Search,
-  Zap,
   ChevronRight,
   Loader2,
   AlertCircle,
@@ -19,10 +16,10 @@ import {
   Instagram,
 } from 'lucide-react'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { useThemeContext } from '@/contexts/ThemeContext'
 import { cn } from '@/utils/cn'
 import { getInitials, formatRelativeTime } from '@/utils/formatters'
 import { ROUTES } from '@/utils/constants'
+import { Logo } from '@/components/brand/Logo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -256,7 +253,6 @@ function UserMenu({ user, onLogout }) {
 
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuthContext()
-  const { isDark, toggleTheme } = useThemeContext()
   const location = useLocation()
   const [commandOpen, setCommandOpen] = useState(false)
 
@@ -296,9 +292,7 @@ export default function Topbar({ onMenuClick }) {
           </button>
 
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="gradient-primary shadow-primary/25 flex h-8 w-8 items-center justify-center rounded-lg shadow-sm">
-              <Zap className="h-4 w-4 text-white" fill="white" aria-hidden="true" />
-            </div>
+            <Logo className="h-8 w-8" />
           </div>
 
           <div className="hidden min-w-0 items-center gap-2.5 md:flex">
@@ -343,25 +337,6 @@ export default function Topbar({ onMenuClick }) {
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={toggleTheme}
-                className="text-foreground-muted hover:bg-surface-muted hover:text-foreground focus-visible:ring-primary/40 rounded-xl p-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {isDark ? (
-                  <Sun className="h-[18px] w-[18px]" aria-hidden="true" />
-                ) : (
-                  <Moon className="h-[18px] w-[18px]" aria-hidden="true" />
-                )}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {isDark ? 'Light mode' : 'Dark mode'}
-            </TooltipContent>
-          </Tooltip>
-
           <NotificationsMenu />
 
           <div className="bg-border mx-1 h-6 w-px" />

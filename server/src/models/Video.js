@@ -6,7 +6,6 @@ const videoSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     title: {
@@ -62,7 +61,6 @@ const videoSchema = new mongoose.Schema(
         "failed",
       ],
       default: "pending",
-      index: true,
     },
 
     processingProgress: {
@@ -103,13 +101,11 @@ const videoSchema = new mongoose.Schema(
 
     scheduledDeletion: {
       type: Date,
-      index: true,
     },
 
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
   },
   {

@@ -131,23 +131,13 @@ export default function Sidebar({ onClose, collapsed = false, onCollapsedChange 
           className="group flex items-center gap-2.5"
           aria-label="TalishFlow dashboard"
         >
-          <div className="relative">
-            <div className="gradient-primary shadow-primary/25 flex h-9 w-9 items-center justify-center rounded-xl shadow-md transition-transform duration-200 group-hover:scale-105">
-              <Zap className="h-4.5 w-4.5 text-white" fill="white" aria-hidden="true" />
-            </div>
-            <span className="border-surface bg-accent absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full border-2" />
-          </div>
+          <Logo className="h-9 w-9 transition-transform duration-200 group-hover:scale-105" />
           {!isCollapsed && (
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-foreground truncate text-[15px] leading-none font-extrabold tracking-tight">
-                  TalishFlow
-                </span>
-                <span className="bg-primary-light text-primary rounded-md px-1.5 py-0.5 text-[9px] leading-none font-black tracking-wider">
-                  PRO
-                </span>
-              </div>
-              <span className="text-foreground-faint mt-1 block text-[10px] font-medium">
+              <span className="text-foreground block truncate text-[15px] leading-tight font-extrabold tracking-tight">
+                TalishFlow
+              </span>
+              <span className="text-foreground-faint block text-[10px] font-medium">
                 Creator Studio
               </span>
             </div>

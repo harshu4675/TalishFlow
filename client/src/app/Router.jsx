@@ -9,6 +9,7 @@ const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage'))
+const AuthCallbackPage = lazy(() => import('@/features/auth/pages/AuthCallbackPage'))
 const NotFoundPage = lazy(() => import('@/features/misc/pages/NotFoundPage'))
 
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
@@ -41,8 +42,21 @@ function PageWrapper({ children }) {
 }
 
 const router = createBrowserRouter([
+  // OAuth callback — intentionally NOT inside PublicRoute: an already
+  // signed-in user may land here from a connect/reconnect error redirect.
+  {
+    path: ROUTES.AUTH_CALLBACK,
+    element: (
+      <PageWrapper>
+        <AuthCallbackPage />
+      </PageWrapper>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+
   {
     element: <PublicRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: (
@@ -50,6 +64,7 @@ const router = createBrowserRouter([
             <AuthLayout />
           </PageWrapper>
         ),
+        errorElement: <RouteErrorBoundary />,
         children: [
           { path: ROUTES.LOGIN, element: <LoginPage /> },
           { path: ROUTES.REGISTER, element: <RegisterPage /> },
@@ -70,6 +85,7 @@ const router = createBrowserRouter([
             <DashboardLayout />
           </PageWrapper>
         ),
+        errorElement: <RouteErrorBoundary />,
         children: [
           { path: ROUTES.DASHBOARD, element: <DashboardPage /> },
           { path: ROUTES.ANALYTICS, element: <AnalyticsPage /> },
@@ -91,6 +107,7 @@ const router = createBrowserRouter([
             <EditorPage />
           </PageWrapper>
         ),
+        errorElement: <RouteErrorBoundary />,
       },
     ],
   },
@@ -107,6 +124,7 @@ const router = createBrowserRouter([
         <NotFoundPage />
       </PageWrapper>
     ),
+    errorElement: <RouteErrorBoundary />,
   },
 ])
 

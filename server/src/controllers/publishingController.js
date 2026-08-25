@@ -1,6 +1,7 @@
 import { asyncHandler, createError } from "../middleware/errorHandler.js";
 import { z } from "zod";
 import PublishingJob from "../models/PublishingJob.js";
+import { serializeClip } from "../utils/serializers.js";
 import Clip from "../models/Clip.js";
 import OAuthToken from "../models/OAuthToken.js";
 import {
@@ -95,7 +96,7 @@ export const listJobs = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      jobs,
+      jobs: populateThumbnails(jobs),
       pagination: {
         total,
         page: Number(page),
@@ -116,7 +117,7 @@ export const getJob = asyncHandler(async (req, res) => {
 
   if (!job) throw createError("Publishing job not found", 404);
 
-  res.json({ success: true, data: { job } });
+  res.json({ success: true, data: { job: populateThumbnails(job)[0] } });
 });
 
 export const cancelJob = asyncHandler(async (req, res) => {
@@ -180,7 +181,7 @@ export const getScheduledPosts = asyncHandler(async (req, res) => {
     .limit(Number(limit))
     .lean();
 
-  res.json({ success: true, data: { posts } });
+  res.json({ success: true, data: { posts: populateThumbnails(posts) } });
 });
 
 export const getYouTubeData = asyncHandler(async (req, res) => {

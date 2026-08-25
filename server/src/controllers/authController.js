@@ -8,14 +8,11 @@ import {
   initiatePasswordReset,
   resetPassword,
   verifyEmail,
-  handleGoogleOAuth,
-  storePlatformTokens,
   REFRESH_COOKIE_NAME,
   getRefreshCookieOptions,
   getClearCookieOptions,
 } from "../services/authService.js";
 import User from "../models/User.js";
-import logger from "../utils/logger.js";
 
 // ============================================================
 // Register
@@ -196,66 +193,6 @@ export const verifyEmailHandler = asyncHandler(async (req, res) => {
     message: "Email verified successfully",
     user,
   });
-});
-
-// ============================================================
-// Google OAuth Initiate
-// ============================================================
-
-export const googleAuth = (req, res, next) => {
-  const passport = req.app.get("passport");
-  passport.authenticate("google", {
-    scope: [
-      "profile",
-      "email",
-      "https://www.googleapis.com/auth/youtube.upload",
-      "https://www.googleapis.com/auth/youtube.readonly",
-      "https://www.googleapis.com/auth/youtube.force-ssl",
-    ],
-    accessType: "offline",
-    prompt: "consent",
-    session: false,
-  })(req, res, next);
-};
-
-// ============================================================
-// Google OAuth Callback
-// ============================================================
-
-export const googleCallback = asyncHandler(async (req, res) => {
-  // At this point, passport has already verified the OAuth flow
-  const {
-    profile,
-    accessToken: googleAccessToken,
-    refreshToken: googleRefreshToken,
-  } = req.googleAuth;
-
-  const { user, accessToken, refreshToken } = await handleGoogleOAuth(
-    profile,
-    req.ip,
-    req.get("User-Agent"),
-  );
-
-  // Store YouTube OAuth tokens if refresh token provided
-  if (googleRefreshToken) {
-    await storePlatformTokens(user.id, "youtube", {
-      accessToken: googleAccessToken,
-      refreshToken: googleRefreshToken,
-      scope: "youtube.upload youtube.readonly",
-      platformUserId: profile.id,
-      platformUsername: profile.displayName,
-    }).catch((err) =>
-      logger.error("Failed to store YouTube tokens", { error: err.message }),
-    );
-  }
-
-  res.cookie(REFRESH_COOKIE_NAME, refreshToken, getRefreshCookieOptions());
-
-  // Redirect to client with access token in URL fragment
-  // (Client reads it, stores in memory, never in localStorage)
-  res.redirect(
-    `${process.env.CLIENT_URL}/auth/callback?token=${accessToken}&status=success`,
-  );
 });
 
 // ============================================================

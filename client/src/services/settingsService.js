@@ -15,6 +15,11 @@ export const settingsService = {
     const response = await http.delete(`/settings/connected-accounts/${platform}`)
     return response.data
   },
+
+  getIntegrations: async () => {
+    const response = await http.get('/settings/integrations')
+    return response.data.data
+  },
 }
 
 export default settingsService

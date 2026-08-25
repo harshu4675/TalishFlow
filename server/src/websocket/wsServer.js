@@ -2,7 +2,6 @@ import { Server } from "socket.io";
 import { env } from "../config/env.js";
 import logger from "../utils/logger.js";
 import jwt from "jsonwebtoken";
-import cookie from "cookie";
 
 let io = null;
 
@@ -17,28 +16,33 @@ export function initWebSocketServer(httpServer) {
   });
 
   // ── Authentication Middleware ────────────────────────────
+  //
+  // The access token lives in client memory (never localStorage / cookies),
+  // so the client passes it in the socket.io handshake `auth` payload.
+  // Previously the server only looked for an `access_token` COOKIE that was
+  // never set — so no client ever joined its user room and realtime
+  // progress events never arrived.
 
   io.use((socket, next) => {
     try {
-      const cookieHeader = socket.handshake.headers.cookie;
+      const token =
+        socket.handshake.auth?.token ||
+        socket.handshake.headers.authorization?.replace(/^Bearer /, "") ||
+        null;
 
-      if (cookieHeader) {
-        const cookies = cookie.parse(cookieHeader);
-        const token = cookies.access_token;
-
-        if (token) {
-          const decoded = jwt.verify(token, env.JWT_SECRET);
-          socket.userId = decoded.userId;
-          return next();
-        }
+      if (!token) {
+        socket.userId = null;
+        return next();
       }
 
-      // Allow connection without auth (limited features)
+      const decoded = jwt.verify(token, env.JWT_SECRET);
+      socket.userId = decoded.userId;
+      return next();
+    } catch {
+      // Expired/invalid token — connect as anonymous; the client will
+      // refresh and reconnect automatically.
       socket.userId = null;
-      next();
-    } catch (error) {
-      socket.userId = null;
-      next(); // Allow but mark as unauthenticated
+      return next();
     }
   });
 

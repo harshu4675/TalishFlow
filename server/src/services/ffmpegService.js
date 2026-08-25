@@ -1,22 +1,82 @@
 import ffmpeg from "fluent-ffmpeg";
-import ffmpegPath from "ffmpeg-static";
-import ffprobePath from "ffprobe-static";
 import path from "path";
 import fs from "fs/promises";
+import fsSync from "fs";
+import { createRequire } from "module";
 import { env } from "../config/env.js";
 import logger from "../utils/logger.js";
 import { ensureDirectory } from "./storageService.js";
 
-if (env.FFMPEG_PATH) {
-  ffmpeg.setFfmpegPath(env.FFMPEG_PATH);
-} else if (ffmpegPath) {
-  ffmpeg.setFfmpegPath(ffmpegPath);
+const require = createRequire(import.meta.url);
+
+/**
+ * Resolve an ffmpeg/ffprobe binary path, in priority order:
+ *   1. Explicit env override (FFMPEG_PATH / FFPROBE_PATH)
+ *   2. ffmpeg-static / ffprobe-static package binaries
+ *   3. @ffmpeg-installer / @ffprobe-installer platform packages
+ *   4. System PATH (return null → fluent-ffmpeg uses PATH default)
+ */
+function resolveBinary(envOverride, resolver) {
+  if (envOverride && fsSync.existsSync(envOverride)) return envOverride;
+
+  try {
+    const candidate = resolver();
+    if (candidate && fsSync.existsSync(candidate)) return candidate;
+  } catch {
+    /* resolver threw — try next */
+  }
+
+  return null;
 }
 
-if (env.FFPROBE_PATH) {
-  ffmpeg.setFfprobePath(env.FFPROBE_PATH);
-} else if (ffprobePath?.path) {
-  ffmpeg.setFfprobePath(ffprobePath.path);
+function fromFfmpegStatic() {
+  return require("ffmpeg-static");
+}
+
+function fromFfprobeStatic() {
+  return require("ffprobe-static").path;
+}
+
+function fromFfmpegInstaller() {
+  return require("@ffmpeg-installer/ffmpeg").path;
+}
+
+function fromFfprobeInstaller() {
+  return require("@ffprobe-installer/ffprobe").path;
+}
+
+const resolvedFfmpegPath =
+  resolveBinary(env.FFMPEG_PATH, fromFfmpegStatic) ||
+  resolveBinary(null, fromFfmpegInstaller) ||
+  resolveBinary(env.FFMPEG_PATH, () => env.FFMPEG_PATH);
+
+const resolvedFfprobePath =
+  resolveBinary(env.FFPROBE_PATH, fromFfprobeStatic) ||
+  resolveBinary(null, fromFfprobeInstaller) ||
+  resolveBinary(env.FFPROBE_PATH, () => env.FFPROBE_PATH);
+
+if (resolvedFfmpegPath) {
+  ffmpeg.setFfmpegPath(resolvedFfmpegPath);
+  logger.info(`FFmpeg binary: ${resolvedFfmpegPath}`);
+} else {
+  logger.warn("FFmpeg: no bundled binary found — falling back to system PATH");
+}
+
+if (resolvedFfprobePath) {
+  ffmpeg.setFfprobePath(resolvedFfprobePath);
+  logger.info(`FFprobe binary: ${resolvedFfprobePath}`);
+} else {
+  logger.warn("FFprobe: no bundled binary found — falling back to system PATH");
+}
+
+/**
+ * Safely parse an ffprobe frame rate like "30000/1001" without eval().
+ */
+function parseFrameRate(value) {
+  if (!value || typeof value !== "string") return 30;
+  const [numerator, denominator] = value.split("/").map(Number);
+  if (!Number.isFinite(numerator)) return 30;
+  return denominator ? numerator / denominator : numerator;
 }
 
 export function probeVideo(filePath) {
@@ -38,7 +98,7 @@ export async function extractVideoMetadata(filePath) {
   }
 
   const duration = parseFloat(metadata.format.duration) || 0;
-  const fps = videoStream.r_frame_rate ? eval(videoStream.r_frame_rate) : 30;
+  const fps = parseFrameRate(videoStream.r_frame_rate || videoStream.avg_frame_rate);
   const bitrate = parseInt(metadata.format.bit_rate) || 0;
 
   return {

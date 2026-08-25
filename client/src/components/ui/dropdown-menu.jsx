@@ -18,7 +18,7 @@ const DropdownMenuContent = forwardRef(function DropdownMenuContent(
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          'z-dropdown border-border bg-surface shadow-popover animate-scale-in min-w-52 overflow-hidden rounded-xl border p-1.5',
+          'z-float border-border bg-surface shadow-popover animate-scale-in min-w-52 overflow-hidden rounded-xl border p-1.5',
           'data-[state=closed]:animate-fade-in',
           className
         )}
@@ -132,7 +132,7 @@ const DropdownMenuSubContent = forwardRef(function DropdownMenuSubContent(
     <DropdownMenuPrimitive.SubContent
       ref={ref}
       className={cn(
-        'z-dropdown border-border bg-surface shadow-popover min-w-40 overflow-hidden rounded-xl border p-1.5',
+        'z-float border-border bg-surface shadow-popover min-w-40 overflow-hidden rounded-xl border p-1.5',
         className
       )}
       {...props}

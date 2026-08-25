@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Compass, ArrowLeft, Zap } from 'lucide-react'
+import { Compass, ArrowLeft } from 'lucide-react'
+import { Logo } from '@/components/brand/Logo'
 import { Button } from '@/components/ui/button'
 import { ROUTES } from '@/utils/constants'
 import PageTitle from '@/components/common/PageTitle'
@@ -9,9 +10,7 @@ export default function NotFoundPage() {
     <div className="bg-canvas flex min-h-[100dvh] items-center justify-center p-6">
       <PageTitle title="Page not found" />
       <div className="w-full max-w-md text-center">
-        <div className="gradient-primary shadow-primary/25 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg">
-          <Zap className="h-8 w-8 text-white" fill="white" aria-hidden="true" />
-        </div>
+        <Logo className="mx-auto mb-6 h-16 w-16" />
 
         <p className="text-primary mb-2 text-sm font-bold tracking-wider uppercase">
           404

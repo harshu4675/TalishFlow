@@ -37,6 +37,17 @@ export const uploadLimiter = rateLimit({
   },
 });
 
+export const oauthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 200 : 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many OAuth attempts. Please try again in a few minutes.",
+  },
+});
+
 export const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,

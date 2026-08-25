@@ -11,7 +11,6 @@ const oAuthTokenSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     platform: {
@@ -58,6 +57,11 @@ const oAuthTokenSchema = new mongoose.Schema(
     isValid: {
       type: Boolean,
       default: true,
+    },
+
+    connectedAt: {
+      type: Date,
+      default: Date.now,
     },
 
     lastRefreshedAt: Date,

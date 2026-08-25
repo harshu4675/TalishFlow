@@ -13,6 +13,7 @@ import {
 import { exportWithQuality, burnSubtitles } from "../services/ffmpegService.js";
 import { ensureDirectory } from "../services/storageService.js";
 import { emitToUser } from "../websocket/wsServer.js";
+import { serializeClip, serializeClips } from "../utils/serializers.js";
 import logger from "../utils/logger.js";
 
 export const listClips = asyncHandler(async (req, res) => {
@@ -33,7 +34,7 @@ export const listClips = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: {
-      clips,
+      clips: serializeClips(clips),
       pagination: {
         total,
         page: Number(page),
@@ -53,7 +54,7 @@ export const getClip = asyncHandler(async (req, res) => {
 
   if (!clip) throw createError("Clip not found", 404);
 
-  res.json({ success: true, data: { clip } });
+  res.json({ success: true, data: { clip: serializeClip(clip) } });
 });
 
 export const updateClip = asyncHandler(async (req, res) => {

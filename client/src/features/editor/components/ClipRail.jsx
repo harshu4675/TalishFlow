@@ -2,7 +2,6 @@ import { memo } from 'react'
 import { Play, Loader2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { formatDuration } from '@/utils/formatters'
-import { clipService } from '@/services/clipService'
 
 const ClipTile = memo(function ClipTile({
   clip,
@@ -25,9 +24,9 @@ const ClipTile = memo(function ClipTile({
       aria-pressed={isSelected}
     >
       <div className="relative aspect-[9/16] w-12 flex-shrink-0 overflow-hidden rounded-lg bg-white/10">
-        {clip.thumbnailPath ? (
+        {clip.thumbnailUrl ? (
           <img
-            src={clipService.getThumbnailUrl(clip._id)}
+            src={clip.thumbnailUrl}
             alt=""
             className="h-full w-full object-cover"
             loading="lazy"

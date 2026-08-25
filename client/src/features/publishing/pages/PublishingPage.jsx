@@ -78,9 +78,9 @@ function JobThumbnail({ job }) {
 
   return (
     <div className="bg-surface-muted relative flex h-11 w-[74px] flex-shrink-0 items-center justify-center overflow-hidden rounded-lg">
-      {clip?.thumbnailPath ? (
+      {clip?.thumbnailUrl ? (
         <img
-          src={clip.thumbnailPath}
+          src={clip.thumbnailUrl}
           alt=""
           className="h-full w-full object-cover"
           loading="lazy"
