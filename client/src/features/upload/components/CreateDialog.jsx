@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const CLIP_OPTIONS = [5, 10, 20]
+import { CLIP_COUNT_OPTIONS } from '@/utils/constants'
 
 export default function CreateDialog() {
   const [isOpen, setIsOpen] = useState(false)
@@ -182,7 +182,7 @@ export default function CreateDialog() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CLIP_OPTIONS.map((count) => (
+                    {CLIP_COUNT_OPTIONS.map((count) => (
                       <SelectItem key={count} value={String(count)}>
                         Top {count}
                       </SelectItem>

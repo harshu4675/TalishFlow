@@ -379,14 +379,13 @@ export async function verifyEmail(token) {
 // ============================================================
 
 /**
- * Handle Google OAuth profile — find or create user
+ * Handle Google OAuth profile — find or create user.
+ * Accepts the normalized OpenID profile shape from
+ * fetchGoogleUserProfile: { id, email, name, picture, emailVerified }.
  */
 export async function handleGoogleOAuth(googleProfile, ip, userAgent) {
-  const { id: googleId, displayName, emails, photos } = googleProfile;
-
-  const email = emails?.[0]?.value;
-  const avatar = photos?.[0]?.value;
-  const name = displayName;
+  const { id: googleId, email, name } = googleProfile;
+  const avatar = googleProfile.picture || null;
 
   if (!email) {
     throw createError("Google account must have an email address", 400);
@@ -403,10 +402,9 @@ export async function handleGoogleOAuth(googleProfile, ip, userAgent) {
       user.googleId = googleId;
     }
 
-    // Update avatar if not set
-    if (!user.avatar && avatar) {
-      user.avatar = avatar;
-    }
+    // Keep profile fresh (name/avatar can change at Google)
+    if (name && user.name !== name) user.name = name;
+    if (avatar) user.avatar = avatar;
 
     user.isEmailVerified = true;
     user.lastLoginAt = new Date();
@@ -445,7 +443,8 @@ export async function handleGoogleOAuth(googleProfile, ip, userAgent) {
 // ============================================================
 
 /**
- * Store encrypted OAuth tokens for a platform
+ * Store encrypted OAuth tokens for a platform (upsert — reconnects update
+ * the same record so duplicate connections can't accumulate).
  */
 export async function storePlatformTokens(userId, platform, tokenData) {
   const {
@@ -455,29 +454,44 @@ export async function storePlatformTokens(userId, platform, tokenData) {
     scope,
     platformUserId,
     platformUsername,
+    platformData,
   } = tokenData;
 
-  const encryptedAccessToken = encrypt(accessToken);
-  const encryptedRefreshToken = refreshToken ? encrypt(refreshToken) : null;
+  const update = {
+    expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+    isValid: true,
+    lastRefreshedAt: new Date(),
+  };
 
-  const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
+  if (accessToken) update.encryptedAccessToken = encrypt(accessToken);
+  if (refreshToken) update.encryptedRefreshToken = encrypt(refreshToken);
+  if (scope !== undefined) update.scope = scope || "";
+  if (platformUserId !== undefined) update.platformUserId = platformUserId;
+  if (platformUsername !== undefined) update.platformUsername = platformUsername;
 
-  await OAuthToken.findOneAndUpdate(
+  const existing = await OAuthToken.findOne({ userId, platform }).lean();
+
+  if (platformData) {
+    // Merge account metadata without clobbering known values with nulls.
+    const merged = { ...(existing?.platformData || {}) };
+    for (const [key, value] of Object.entries(platformData)) {
+      if (value !== undefined && value !== null) merged[key] = value;
+    }
+    update.platformData = merged;
+  }
+
+  const record = await OAuthToken.findOneAndUpdate(
     { userId, platform },
     {
-      encryptedAccessToken,
-      encryptedRefreshToken,
-      expiresAt,
-      scope: scope || "",
-      platformUserId,
-      platformUsername,
-      isValid: true,
-      lastRefreshedAt: new Date(),
+      $set: update,
+      $setOnInsert: { connectedAt: new Date() },
     },
     { upsert: true, new: true },
   );
 
   logger.info("Platform OAuth tokens stored", { userId, platform });
+
+  return record;
 }
 
 /**
@@ -509,9 +523,24 @@ export async function getPlatformToken(userId, platform) {
     scope: tokenDoc.scope,
     platformUserId: tokenDoc.platformUserId,
     platformUsername: tokenDoc.platformUsername,
+    platformData: tokenDoc.platformData || {},
     isExpired: tokenDoc.isExpired(),
     isExpiringSoon: tokenDoc.isExpiringSoon(),
   };
+}
+
+/**
+ * Remove a platform connection and mark it invalid (audit trail retained
+ * only in logs — the token material itself is deleted).
+ */
+export async function disconnectPlatform(userId, platform, accessToken = null) {
+  const result = await OAuthToken.deleteOne({ userId, platform });
+
+  logger.info("Platform disconnected", {
+    userId,
+    platform,
+    removed: result.deletedCount > 0,
+  });
 }
 
 // ============================================================

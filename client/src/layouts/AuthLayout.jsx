@@ -1,5 +1,6 @@
 import { Outlet, Link } from 'react-router-dom'
-import { Zap, Scissors, TrendingUp, Upload, Radio } from 'lucide-react'
+import { Scissors, TrendingUp, Upload, Radio } from 'lucide-react'
+import { Logo } from '@/components/brand/Logo'
 import { ROUTES } from '@/utils/constants'
 
 const FEATURES = [
@@ -41,9 +42,7 @@ export default function AuthLayout() {
 
         <div className="relative z-10 flex w-full flex-col justify-between p-12 xl:p-14">
           <Link to={ROUTES.DASHBOARD} className="group flex w-fit items-center gap-3">
-            <div className="gradient-primary shadow-primary/30 flex h-10 w-10 items-center justify-center rounded-xl shadow-lg transition-transform duration-300 group-hover:scale-105">
-              <Zap className="h-5 w-5 text-white" fill="white" aria-hidden="true" />
-            </div>
+            <Logo className="h-10 w-10 transition-transform duration-300 group-hover:scale-105" />
             <span className="text-foreground text-xl font-extrabold tracking-tight">
               TalishFlow
             </span>
@@ -90,9 +89,7 @@ export default function AuthLayout() {
 
       <div className="bg-surface flex flex-1 flex-col">
         <div className="border-border-subtle flex items-center gap-3 border-b p-5 lg:hidden">
-          <div className="gradient-primary shadow-primary/25 flex h-9 w-9 items-center justify-center rounded-xl shadow-md">
-            <Zap className="h-4 w-4 text-white" fill="white" aria-hidden="true" />
-          </div>
+          <Logo className="h-9 w-9" />
           <span className="text-foreground text-lg font-extrabold tracking-tight">
             TalishFlow
           </span>

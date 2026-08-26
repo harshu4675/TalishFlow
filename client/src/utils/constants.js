@@ -7,6 +7,7 @@ export const ROUTES = {
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password/:token',
+  AUTH_CALLBACK: '/auth/callback',
 
   DASHBOARD: '/dashboard',
   EDITOR: '/editor/:videoId',
@@ -32,6 +33,12 @@ export const UPLOAD_CONFIG = {
     'video/webm': ['.webm'],
   },
 }
+
+/**
+ * Clip generation options — must stay in sync with the server
+ * (server/src/utils/constants.js VALID_CLIP_COUNTS).
+ */
+export const CLIP_COUNT_OPTIONS = [3, 5, 10, 15, 20]
 
 export const PROCESSING_STATUS = {
   PENDING: 'pending',

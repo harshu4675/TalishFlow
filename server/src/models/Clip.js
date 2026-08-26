@@ -6,14 +6,12 @@ const clipSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     videoId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Video",
       required: true,
-      index: true,
     },
 
     title: {
@@ -109,12 +107,10 @@ const clipSchema = new mongoose.Schema(
       type: String,
       enum: ["processing", "ready", "exported", "published", "failed"],
       default: "processing",
-      index: true,
     },
 
     scheduledDeletion: {
       type: Date,
-      index: true,
     },
 
     isDeleted: {

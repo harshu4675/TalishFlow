@@ -46,12 +46,33 @@ export const authService = {
     return response.data
   },
 
+  /**
+   * Google LOGIN — the backend builds the authorization URL and redirects
+   * (proxy keeps this same-origin). Google then redirects to the backend
+   * callback which lands the user on /auth/callback.
+   */
   initiateGoogleOAuth: () => {
-    window.location.href = '/api/v1/auth/google'
+    window.location.assign('/api/v1/auth/google')
   },
 
-  initiateInstagramOAuth: () => {
-    window.location.href = '/api/v1/auth/instagram'
+  /**
+   * Platform CONNECT (YouTube / Instagram) — must be initiated by an
+   * authenticated user. The backend returns the fully-built provider
+   * authorization URL (with signed state) and we navigate to it.
+   * Do NOT use <a href="/api/v1/auth/…"> for these: initiation requires
+   * the Authorization header.
+   *
+   * @param {'youtube'|'instagram'} platform
+   */
+  connectPlatform: async (platform) => {
+    const response = await http.post(`/auth/oauth/${platform}/initiate`)
+    const url = response.data?.data?.url
+
+    if (!url) {
+      throw new Error('The server did not return an authorization URL')
+    }
+
+    window.location.assign(url)
   },
 }
 

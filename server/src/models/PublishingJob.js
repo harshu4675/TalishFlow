@@ -6,7 +6,6 @@ const publishingJobSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     clipId: {
@@ -32,12 +31,10 @@ const publishingJobSchema = new mongoose.Schema(
         "cancelled",
       ],
       default: "pending",
-      index: true,
     },
 
     scheduledAt: {
       type: Date,
-      index: true,
     },
 
     publishedAt: Date,

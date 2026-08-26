@@ -3,22 +3,23 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import mongoSanitize from "express-mongo-sanitize";
-import passport from "passport";
 import path from "path";
 import { fileURLToPath } from "url";
 
 import { env } from "./config/env.js";
 import { connectDatabase } from "./config/database.js";
 import { connectRedis } from "./config/redis.js";
-import { configurePassport } from "./config/passport.js";
 import logger from "./utils/logger.js";
 import requestLogger from "./middleware/requestLogger.js";
 import errorHandler, { notFoundHandler } from "./middleware/errorHandler.js";
 import { generalLimiter } from "./middleware/rateLimit.js";
 import routes from "./routes/index.js";
+import mediaRoutes from "./routes/mediaRoutes.js";
 import { initWebSocketServer } from "./websocket/wsServer.js";
 import { startCleanupWorker } from "./workers/cleanupWorker.js";
-import "./workers/processingWorker.js";
+import { initQueues } from "./queues/queueManager.js";
+import { handleProcessVideo } from "./workers/processingWorker.js";
+import { handlePublish } from "./workers/publishingWorker.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,10 +68,6 @@ app.use(mongoSanitize());
 app.use(requestLogger);
 app.use("/api/", generalLimiter);
 
-configurePassport();
-app.use(passport.initialize());
-app.set("passport", passport);
-
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -80,6 +77,11 @@ app.get("/health", (req, res) => {
     environment: env.NODE_ENV,
   });
 });
+
+// Publicly reachable, signature-protected media endpoints (used by
+// external services e.g. Meta fetching a clip for Instagram publishing).
+// Mounted before the authenticated API on purpose.
+app.use("/api/v1/media", mediaRoutes);
 
 app.use("/api/v1", routes);
 
@@ -110,6 +112,11 @@ export async function startApp() {
 
     const redis = await connectRedis();
     app.set("redis", redis);
+
+    await initQueues({
+      onProcessVideo: handleProcessVideo,
+      onPublish: handlePublish,
+    });
 
     const server = app.listen(env.PORT, () => {
       logger.info(

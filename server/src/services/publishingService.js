@@ -1,4 +1,3 @@
-import path from "path";
 import fs from "fs";
 import PublishingJob from "../models/PublishingJob.js";
 import Clip from "../models/Clip.js";
@@ -6,6 +5,7 @@ import User from "../models/User.js";
 import OAuthToken from "../models/OAuthToken.js";
 import { uploadVideoToYouTube } from "./youtubeService.js";
 import { uploadReelToInstagram } from "./instagramService.js";
+import { buildSignedMediaUrl } from "./mediaTokenService.js";
 import { emitToUser } from "../websocket/wsServer.js";
 import { createError } from "../middleware/errorHandler.js";
 import logger from "../utils/logger.js";
@@ -163,13 +163,21 @@ async function publishToYouTube(job, clip, userId) {
 }
 
 async function publishToInstagram(job, clip, userId) {
-  const videoPublicUrl = buildPublicVideoUrl(clip);
-
-  if (!videoPublicUrl) {
+  // Instagram's servers must be able to reach the media over the public
+  // internet. We issue a signed, short-lived PUBLIC URL; in production it
+  // must be HTTPS (Meta requirement).
+  if (env.NODE_ENV === "production" && !env.PUBLIC_API_URL.startsWith("https://")) {
     throw new Error(
-      "A publicly accessible video URL is required for Instagram publishing. Configure your server public URL in environment variables.",
+      "Instagram publishing requires the API to be reachable over HTTPS. " +
+        "Set PUBLIC_API_URL to your public API domain.",
     );
   }
+
+  const videoPublicUrl = buildSignedMediaUrl({
+    clipId: clip._id.toString(),
+    scope: "publish",
+    ttlSeconds: 45 * 60, // Instagram fetches media asynchronously
+  });
 
   const caption = buildDescription(job);
 
@@ -198,37 +206,23 @@ function buildDescription(job) {
   return parts.join("\n\n").slice(0, 5000);
 }
 
-function buildPublicVideoUrl(clip) {
-  const publicBaseUrl = env.CLIENT_URL || env.PUBLIC_URL;
-
-  if (!publicBaseUrl) return null;
-
-  const filename = path.basename(clip.filePath);
-
-  return `${publicBaseUrl}/api/v1/clips/${clip._id}/stream`;
-}
-
+/**
+ * Mark a publishing job as failed with the real error.
+ *
+ * Automatic in-service re-queueing used to silently flip failed jobs back
+ * to "queued" WITHOUT re-executing them — leaving endless "queued" jobs.
+ * Recovery is explicit now: the queue backend retries transient failures
+ * (Bull attempts), and the user can always hit "Retry" on a failed job.
+ */
 async function failJob(job, errorMessage) {
-  const retryCount = (job.retryCount || 0) + 1;
+  await PublishingJob.findByIdAndUpdate(job._id, {
+    status: "failed",
+    errorMessage,
+  });
 
-  if (retryCount < (job.maxRetries || 3)) {
-    await PublishingJob.findByIdAndUpdate(job._id, {
-      status: "queued",
-      retryCount,
-      errorMessage,
-    });
-  } else {
-    await PublishingJob.findByIdAndUpdate(job._id, {
-      status: "failed",
-      retryCount,
-      errorMessage,
-    });
-  }
-
-  logger.error("Publishing job failed", {
+  logger.error("publication.failed", {
     jobId: job._id,
     platform: job.platform,
     error: errorMessage,
-    retryCount,
   });
 }

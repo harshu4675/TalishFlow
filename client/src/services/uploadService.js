@@ -34,9 +34,6 @@ async function uploadChunk({ uploadId, chunk, chunkIndex, totalChunks, signal })
 
   const response = await http.post('/videos/resumable/chunk', formData, {
     signal,
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
     timeout: 0,
   })
 

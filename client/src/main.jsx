@@ -3,6 +3,13 @@ import { createRoot } from 'react-dom/client'
 import App from './app/App.jsx'
 import './styles/globals.css'
 
+// One-time cleanup of the removed dark-mode preference key.
+try {
+  localStorage.removeItem('talishflow_theme')
+} catch {
+  /* storage unavailable */
+}
+
 const root = document.getElementById('root')
 
 if (!root) {

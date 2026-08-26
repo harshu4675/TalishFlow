@@ -1,6 +1,5 @@
 import path from "path";
 import fs from "fs/promises";
-import processingQueue from "../queues/processingQueue.js";
 import ProcessingJob from "../models/ProcessingJob.js";
 import Video from "../models/Video.js";
 import Clip from "../models/Clip.js";
@@ -63,7 +62,13 @@ async function updateProgress(
   emitProcessingProgress(userId, jobId, { status, progress, currentStep });
 }
 
-processingQueue.process("process-video", 2, async (queueJob) => {
+/**
+ * Video processing pipeline handler.
+ * Invoked by the queue manager (Bull when Redis is configured, otherwise
+ * the local in-process queue). Never registers itself at import time so
+ * the module is safe to load before Redis is available.
+ */
+export async function handleProcessVideo(queueJob) {
   const { processingJobId, videoId, userId } = queueJob.data;
 
   logger.info("Processing job started", { processingJobId, videoId, userId });
@@ -152,7 +157,21 @@ processingQueue.process("process-video", 2, async (queueJob) => {
     );
 
     const audioPath = path.join(workDirectory, "audio.wav");
-    await extractAudioTrack(videoFilePath, audioPath);
+    const hasAudio = Boolean(metadata.audioCodec);
+
+    if (hasAudio) {
+      await extractAudioTrack(videoFilePath, audioPath).catch((error) => {
+        logger.warn("Audio extraction failed — continuing silently", {
+          processingJobId,
+          error: error.message,
+        });
+      });
+    }
+
+    const audioAvailable = await fs
+      .access(audioPath)
+      .then(() => true)
+      .catch(() => false);
 
     const [sceneChanges, faceData, motionSegments, silentSegments] =
       await Promise.all([
@@ -163,45 +182,82 @@ processingQueue.process("process-video", 2, async (queueJob) => {
           primaryFaceRegion: null,
         })),
         detectMotionSegments(videoFilePath).catch(() => []),
-        detectSilentSegments(audioPath).catch(() => []),
+        audioAvailable
+          ? detectSilentSegments(audioPath).catch(() => [])
+          : Promise.resolve([]),
       ]);
 
     await Video.findByIdAndUpdate(videoId, {
       sceneChanges: sceneChanges.slice(0, 500),
     });
 
-    await updateProgress(
-      processingJobId,
-      videoId,
-      userId,
-      "transcribing",
-      55,
-      "Transcribing audio with Whisper",
-    );
-
     const transcriptDirectory = path.join(workDirectory, "transcript");
     await ensureDirectory(transcriptDirectory);
 
-    const transcriptionResult = await transcribeAudio({
-      audioPath,
-      outputDirectory: transcriptDirectory,
-      onProgress: (percent) => {
-        const scaled = 55 + Math.round(percent * 0.1);
+    // Transcription failure (missing Whisper/OpenAI, silent video, …)
+    // must NOT fail the whole pipeline — moment detection falls back to
+    // scene/motion/face signals.
+    let transcriptionResult = {
+      text: "",
+      language: null,
+      segments: [],
+      srtPath: null,
+    };
+
+    if (audioAvailable) {
+      await updateProgress(
+        processingJobId,
+        videoId,
+        userId,
+        "transcribing",
+        55,
+        "Transcribing audio",
+      );
+
+      try {
+        transcriptionResult = await transcribeAudio({
+          audioPath,
+          outputDirectory: transcriptDirectory,
+          onProgress: (percent) => {
+            const scaled = 55 + Math.round(percent * 0.1);
+            emitProcessingProgress(userId, processingJobId, {
+              status: "transcribing",
+              progress: scaled,
+              currentStep: `Transcribing audio ${percent}%`,
+            });
+          },
+        });
+
+        await Video.findByIdAndUpdate(videoId, {
+          transcript: {
+            text: transcriptionResult.text,
+            language: transcriptionResult.language,
+            segments: transcriptionResult.segments.slice(0, 2000),
+          },
+        });
+      } catch (transcriptionError) {
+        logger.warn("Transcription failed — continuing without transcript", {
+          processingJobId,
+          error: transcriptionError.message,
+        });
+
         emitProcessingProgress(userId, processingJobId, {
           status: "transcribing",
-          progress: scaled,
-          currentStep: `Transcribing audio ${percent}%`,
+          progress: 60,
+          currentStep:
+            "Transcription unavailable — using visual analysis instead",
         });
-      },
-    });
-
-    await Video.findByIdAndUpdate(videoId, {
-      transcript: {
-        text: transcriptionResult.text,
-        language: transcriptionResult.language,
-        segments: transcriptionResult.segments.slice(0, 2000),
-      },
-    });
+      }
+    } else {
+      await updateProgress(
+        processingJobId,
+        videoId,
+        userId,
+        "transcribing",
+        55,
+        "No audio track — skipping transcription",
+      );
+    }
 
     await updateProgress(
       processingJobId,
@@ -398,7 +454,7 @@ processingQueue.process("process-video", 2, async (queueJob) => {
 
     throw error;
   }
-});
+}
 
 function buildClipTitle(transcriptionResult, moment, index) {
   if (!transcriptionResult?.segments?.length) {
@@ -418,4 +474,4 @@ function buildClipTitle(transcriptionResult, moment, index) {
   return `Clip ${index + 1}`;
 }
 
-export default processingQueue;
+export default handleProcessVideo;

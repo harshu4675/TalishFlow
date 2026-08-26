@@ -43,50 +43,13 @@
   color-scheme: light;
 }
 
-[data-theme='dark'] {
-  --tf-canvas: #0b0d12;
-  --tf-surface: #12151c;
-  --tf-surface-muted: #191d26;
-  --tf-surface-strong: #222734;
-
-  --tf-border: #262c38;
-  --tf-border-subtle: #1c212b;
-
-  --tf-foreground: #eceef3;
-  --tf-foreground-muted: #9aa3b2;
-  --tf-foreground-faint: #5f6a7d;
-
-  --tf-primary: #4f46e5;
-  --tf-primary-hover: #4338ca;
-  --tf-primary-deep: #312e81;
-  --tf-primary-light: rgba(129, 140, 248, 0.14);
-  --tf-primary-glow: rgba(129, 140, 248, 0.22);
-
-  --tf-accent: #fb923c;
-  --tf-accent-hover: #fdba74;
-  --tf-accent-light: rgba(251, 146, 60, 0.14);
-
-  --tf-success: #16a34a;
-  --tf-success-dark: #4ade80;
-  --tf-success-light: rgba(74, 222, 128, 0.14);
-
-  --tf-warning: #fbbf24;
-  --tf-warning-light: rgba(251, 191, 36, 0.14);
-
-  --tf-error: #dc2626;
-  --tf-error-light: rgba(248, 113, 113, 0.14);
-
-  --tf-info: #38bdf8;
-  --tf-info-light: rgba(56, 189, 248, 0.14);
-
-  --tf-overlay: rgba(0, 0, 0, 0.6);
-  --tf-shadow-color: rgba(0, 0, 0, 0.4);
-
-  color-scheme: dark;
-}
-
 @theme inline {
   --color-canvas: var(--tf-canvas);
+  --z-dropdown: 350;
+  --z-modal: 500;
+  --z-float: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
   --color-surface: var(--tf-surface);
   --color-surface-muted: var(--tf-surface-muted);
   --color-surface-strong: var(--tf-surface-strong);
@@ -229,6 +192,43 @@ h6 {
   border-radius: 8px;
 }
 
+/*
+ * Indeterminate loader bar — used on the OAuth callback screen and other
+ * full-page "working" states where a concrete percentage is not available.
+ *
+ * <div class="tf-loader-bar">          ← track
+ *   <div class="tf-loader-bar-fill" /> ← moving indicator
+ * </div>
+ */
+.tf-loader-bar {
+  background: var(--tf-surface-muted);
+}
+.tf-loader-bar-fill {
+  height: 100%;
+  width: 45%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--tf-primary), var(--tf-accent));
+  animation: tf-loader-indeterminate 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform;
+}
+@keyframes tf-loader-indeterminate {
+  0% {
+    transform: translateX(-110%);
+  }
+  60% {
+    transform: translateX(240%);
+  }
+  100% {
+    transform: translateX(240%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tf-loader-bar-fill {
+    animation: none;
+    width: 100%;
+  }
+}
+
 .gradient-text {
   background: linear-gradient(
     135deg,
@@ -263,23 +263,40 @@ h6 {
   border: 1px solid var(--tf-border);
 }
 
+/*
+ * Layering contract (single source of truth):
+ *   base content            0 – 99
+ *   sticky chrome          200
+ *   fixed chrome           300
+ *   dropdowns in content   350
+ *   modal + backdrop       500
+ *   dropdowns in modals    600   ← Radix Select/Dropdown portals
+ *   tooltips               700
+ *   toasts                 800
+ */
 .z-toast {
   z-index: 800;
+}
+.z-tooltip {
+  z-index: 700;
+}
+.z-float {
+  z-index: 600;
 }
 .z-modal {
   z-index: 500;
 }
 .z-modal-backdrop {
-  z-index: 400;
+  z-index: 500;
+}
+.z-dropdown {
+  z-index: 350;
 }
 .z-fixed {
   z-index: 300;
 }
 .z-sticky {
   z-index: 200;
-}
-.z-dropdown {
-  z-index: 100;
 }
 
 @keyframes shimmer {

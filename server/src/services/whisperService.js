@@ -5,6 +5,17 @@ import { env } from "../config/env.js";
 import logger from "../utils/logger.js";
 import { ensureDirectory } from "./storageService.js";
 
+/**
+ * Audio transcription.
+ *
+ * Strategy:
+ *   1. If OPENAI_API_KEY is configured, use the OpenAI Whisper API
+ *      (whisper-1) — no local Python dependency.
+ *   2. Otherwise, use a local Whisper installation via Python.
+ *
+ * A transcription failure surfaces as a thrown error; callers (processing
+ * worker) treat it as non-fatal and proceed with visual analysis only.
+ */
 export async function transcribeAudio({
   audioPath,
   outputDirectory,
@@ -13,6 +24,16 @@ export async function transcribeAudio({
   onProgress,
 }) {
   await ensureDirectory(outputDirectory);
+
+  if (env.OPENAI_API_KEY) {
+    try {
+      return await transcribeWithOpenAI({ audioPath, outputDirectory, onProgress });
+    } catch (error) {
+      logger.warn("OpenAI transcription failed, trying local Whisper", {
+        error: error.message,
+      });
+    }
+  }
 
   const whisperModel = model || env.WHISPER_MODEL || "base";
   const pythonPath = env.PYTHON_PATH || "python3";
@@ -32,6 +53,13 @@ export async function transcribeAudio({
       stdio: ["ignore", "pipe", "pipe"],
     });
 
+    // Hard kill switch — never let a transcription run forever.
+    const killTimer = setTimeout(() => {
+      process.kill("SIGKILL");
+      reject(new Error("Transcription timed out after 30 minutes"));
+    }, 30 * 60 * 1000);
+    killTimer.unref?.();
+
     let stdout = "";
     let stderr = "";
 
@@ -50,14 +78,20 @@ export async function transcribeAudio({
     });
 
     process.on("close", async (code) => {
+      clearTimeout(killTimer);
+
       if (code !== 0) {
+        const missingModule = stderr.includes("No module named 'whisper'");
         logger.error("Whisper transcription failed", {
           code,
           stderr: stderr.slice(0, 500),
         });
+
         return reject(
           new Error(
-            `Whisper exited with code ${code}: ${stderr.slice(0, 300)}`,
+            missingModule
+              ? "Local Whisper is not installed. Install it with: pip install -U openai-whisper (or configure OPENAI_API_KEY)."
+              : `Whisper exited with code ${code}: ${stderr.slice(0, 300)}`,
           ),
         );
       }
@@ -71,6 +105,16 @@ export async function transcribeAudio({
     });
 
     process.on("error", (error) => {
+      clearTimeout(killTimer);
+
+      if (error.code === "ENOENT") {
+        return reject(
+          new Error(
+            `Python not found at "${pythonPath}". Set PYTHON_PATH or configure OPENAI_API_KEY.`,
+          ),
+        );
+      }
+
       reject(new Error(`Failed to start Whisper process: ${error.message}`));
     });
   });
@@ -85,11 +129,21 @@ function buildWhisperScript({ audioPath, outputDirectory, model, language }) {
   const languageArg =
     language && language !== "auto" ? `language='${language}'` : "";
 
+  // NOTE: helper functions must be defined BEFORE they are used —
+  // an earlier version called format_time() before its definition,
+  // which made every local transcription crash with a NameError.
   return `
 import whisper
 import json
 import sys
 import os
+
+def format_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds % 1) * 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 model = whisper.load_model('${model}')
 
@@ -114,15 +168,97 @@ with open(srt_path, 'w', encoding='utf-8') as f:
         f.write(f"{format_time(start)} --> {format_time(end)}\\n")
         f.write(f"{text}\\n\\n")
 
-def format_time(seconds):
-    h = int(seconds // 3600)
-    m = int((seconds % 3600) // 60)
-    s = int(seconds % 60)
-    ms = int((seconds % 1) * 1000)
-    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
-
 print("TRANSCRIPTION_COMPLETE")
 `;
+}
+
+// ============================================================
+// OpenAI Whisper API path
+// ============================================================
+
+async function transcribeWithOpenAI({ audioPath, outputDirectory, onProgress }) {
+  onProgress?.(10);
+
+  const fileBuffer = await fs.readFile(audioPath);
+
+  const formData = new FormData();
+  formData.append("model", "whisper-1");
+  formData.append("response_format", "verbose_json");
+  formData.append("timestamp_granularities[]", "segment");
+  formData.append(
+    "file",
+    new Blob([fileBuffer], { type: "audio/wav" }),
+    path.basename(audioPath),
+  );
+
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: formData,
+    signal: AbortSignal.timeout(180_000),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(
+      `OpenAI transcription failed (${response.status}): ${
+        body?.error?.message || "unknown error"
+      }`,
+    );
+  }
+
+  onProgress?.(85);
+
+  const data = await response.json();
+
+  const transcriptPath = path.join(outputDirectory, "transcript.json");
+  await fs.writeFile(transcriptPath, JSON.stringify(data, null, 2), "utf-8");
+
+  // Normalize to the shape produced by local Whisper so downstream code
+  // (parseWhisperOutput) is source-agnostic.
+  const segments = (data.segments || []).map((segment) => ({
+    start: segment.start,
+    end: segment.end,
+    text: segment.text,
+    avg_logprob: segment.avg_logprob,
+    words: [],
+  }));
+
+  const srtContent = segments
+    .map(
+      (segment, index) =>
+        `${index + 1}\n${formatSrtTime(segment.start)} --> ${formatSrtTime(
+          segment.end,
+        )}\n${(segment.text || "").trim()}`,
+    )
+    .join("\n\n");
+
+  const srtPath = path.join(outputDirectory, "subtitles.srt");
+  await fs.writeFile(srtPath, srtContent, "utf-8");
+
+  onProgress?.(100);
+
+  return {
+    text: (data.text || "").trim(),
+    language: data.language || "en",
+    segments: segments.map((segment) => ({
+      start: segment.start,
+      end: segment.end,
+      text: (segment.text || "").trim(),
+      confidence: segment.avg_logprob ? Math.exp(segment.avg_logprob) : null,
+      words: [],
+    })),
+    srtPath,
+  };
+}
+
+function formatSrtTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.round((seconds % 1) * 1000);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)},${String(ms).padStart(3, "0")}`;
 }
 
 async function parseWhisperOutput(outputDirectory, audioPath) {

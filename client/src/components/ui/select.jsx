@@ -42,7 +42,7 @@ const SelectContent = forwardRef(function SelectContent(
         ref={ref}
         position={position}
         className={cn(
-          'z-dropdown border-border bg-surface shadow-popover animate-scale-in overflow-hidden rounded-xl border',
+          'z-float border-border bg-surface shadow-popover animate-scale-in overflow-hidden rounded-xl border',
           position === 'popper' &&
             'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
           className

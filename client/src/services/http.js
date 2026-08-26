@@ -12,17 +12,12 @@ const http = axios.create({
   },
 })
 
+/** Access token lives only in memory — never localStorage (XSS-safe). */
 http.interceptors.request.use((config) => {
   const token = window.__talishflow_access_token__
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-
-  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-  if (csrfToken && ['post', 'put', 'patch', 'delete'].includes(config.method)) {
-    config.headers['X-CSRF-Token'] = csrfToken
-  }
-
   return config
 })
 
@@ -38,6 +33,28 @@ function onTokenRefreshed(token) {
   refreshSubscribers = []
 }
 
+function rejectRefreshSubscribers() {
+  refreshSubscribers = []
+}
+
+/** Retry policy: only safe, idempotent reads, never on a client abort. */
+const IDEMPOTENT_METHODS = new Set(['get', 'head', 'options'])
+const MAX_RETRIES = 2
+const RETRY_DELAY_MS = [400, 1200]
+
+function shouldRetry(error) {
+  const config = error.config || {}
+  if (!IDEMPOTENT_METHODS.has(config.method)) return false
+  if ((config.__retryCount || 0) >= MAX_RETRIES) return false
+  if (error.code === 'ERR_CANCELED' || error.name === 'AbortError') return false
+
+  const status = error.response?.status
+  // Retriable: network failure / timeout, rate limit, or transient 5xx.
+  return !status || status === 408 || status === 429 || status >= 500
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 http.interceptors.response.use(
   (response) => {
     if (response.data?.accessToken) {
@@ -46,18 +63,22 @@ http.interceptors.response.use(
     return response
   },
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config || {}
 
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes('/auth/refresh') &&
-      !originalRequest.url.includes('/auth/login')
+      !originalRequest.url?.includes('/auth/refresh') &&
+      !originalRequest.url?.includes('/auth/login')
     ) {
       if (isRefreshing) {
-        // Queue the request until refresh completes
-        return new Promise((resolve) => {
+        // Queue the request until the refresh completes.
+        return new Promise((resolve, reject) => {
           subscribeTokenRefresh((token) => {
+            if (!token) {
+              reject(error)
+              return
+            }
             originalRequest.headers.Authorization = `Bearer ${token}`
             resolve(http(originalRequest))
           })
@@ -80,17 +101,22 @@ http.interceptors.response.use(
         return http(originalRequest)
       } catch (refreshError) {
         isRefreshing = false
-        refreshSubscribers = []
-
+        rejectRefreshSubscribers()
         window.__talishflow_access_token__ = null
-
         window.dispatchEvent(new CustomEvent('auth:logout'))
-
         return Promise.reject(refreshError)
       }
     }
 
+    // Transient failure on an idempotent read → silent retry with backoff.
+    if (shouldRetry(error)) {
+      originalRequest.__retryCount = (originalRequest.__retryCount || 0) + 1
+      await sleep(RETRY_DELAY_MS[originalRequest.__retryCount - 1] ?? 1500)
+      return http(originalRequest)
+    }
+
     error.userMessage = parseErrorMessage(error)
+    error.code = error.response?.data?.error?.code || error.code
 
     return Promise.reject(error)
   }
@@ -98,7 +124,6 @@ http.interceptors.response.use(
 
 export const httpUpload = (url, formData, onProgress, config = {}) =>
   http.post(url, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 0,
     onUploadProgress: (progressEvent) => {
       if (onProgress && progressEvent.total) {

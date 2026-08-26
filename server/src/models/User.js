@@ -40,7 +40,6 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String,
       sparse: true,
-      index: true,
     },
 
     // ── Account Status ────────────────────────────────────
@@ -171,8 +170,6 @@ const userSchema = new mongoose.Schema(
 // Indexes
 // ============================================================
 
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 }, { sparse: true });
 userSchema.index({ createdAt: -1 });
 
 // ============================================================

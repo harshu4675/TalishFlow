@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { ThemeProvider } from '@/contexts/ThemeContext'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { UploadProvider } from '@/contexts/UploadContext'
 
@@ -29,13 +28,11 @@ const queryClient = new QueryClient({
 export default function Providers({ children }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <UploadProvider>{children}</UploadProvider>
-          </NotificationProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <UploadProvider>{children}</UploadProvider>
+        </NotificationProvider>
+      </AuthProvider>
 
       {import.meta.env.DEV && (
         <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />

@@ -1,10 +1,11 @@
 import { Router } from "express";
-import passport from "passport";
-import { env } from "../config/env.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { validate } from "../middleware/validate.js";
-import { authLimiter, passwordResetLimiter } from "../middleware/rateLimit.js";
-import { asyncHandler } from "../middleware/errorHandler.js";
+import {
+  authLimiter,
+  oauthLimiter,
+  passwordResetLimiter,
+} from "../middleware/rateLimit.js";
 import {
   registerSchema,
   loginSchema,
@@ -22,12 +23,18 @@ import {
   forgotPassword,
   resetPasswordHandler,
   verifyEmailHandler,
-  googleCallback,
   changePassword,
 } from "../controllers/authController.js";
-import { storePlatformTokens } from "../services/authService.js";
+import {
+  googleLogin,
+  googleCallbackHandler,
+  initiatePlatformConnect,
+  instagramCallbackHandler,
+} from "../controllers/oauthController.js";
 
 const router = Router();
+
+// ── Credentials ──────────────────────────────────────────────
 
 router.post("/register", authLimiter, validate(registerSchema), register);
 
@@ -50,66 +57,30 @@ router.post(
   resetPasswordHandler,
 );
 
-router.get(
-  "/google",
-  passport.authenticate("google", {
-    scope: [
-      "profile",
-      "email",
-      "https://www.googleapis.com/auth/youtube.upload",
-      "https://www.googleapis.com/auth/youtube.readonly",
-      "https://www.googleapis.com/auth/youtube.force-ssl",
-    ],
-    accessType: "offline",
-    prompt: "consent",
-    session: false,
-  }),
+// ── OAuth — Google (login) ──────────────────────────────────
+//
+// GET /auth/google               → redirect the user to Google (login)
+// GET /auth/google/callback      → handles login AND YouTube-connect
+//                                  (mode is inside signed state)
+
+router.get("/google", oauthLimiter, googleLogin);
+router.get("/google/callback", oauthLimiter, googleCallbackHandler);
+
+// ── OAuth — platform connect (authenticated) ────────────────
+//
+// POST /auth/oauth/:provider/initiate  → { url } for window redirect
+// GET  /auth/instagram/callback        → Meta redirects here
+
+router.post(
+  "/oauth/:platform/initiate",
+  oauthLimiter,
+  authenticate,
+  initiatePlatformConnect,
 );
 
-router.get(
-  "/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: `${env.CLIENT_URL}/login?error=oauth_failed`,
-  }),
-  (req, res, next) => {
-    req.googleAuth = req.user;
-    next();
-  },
-  googleCallback,
-);
+router.get("/instagram/callback", oauthLimiter, instagramCallbackHandler);
 
-router.get(
-  "/instagram",
-  passport.authenticate("instagram", {
-    scope: [
-      "instagram_basic",
-      "instagram_content_publish",
-      "pages_show_list",
-      "pages_read_engagement",
-    ],
-    session: false,
-  }),
-);
-
-router.get(
-  "/instagram/callback",
-  passport.authenticate("instagram", {
-    session: false,
-    failureRedirect: `${env.CLIENT_URL}/settings/accounts?error=instagram_failed`,
-  }),
-  asyncHandler(async (req, res) => {
-    const { profile, accessToken } = req.user;
-
-    await storePlatformTokens(req.user.id || profile.id, "instagram", {
-      accessToken,
-      platformUserId: profile.id,
-      platformUsername: profile.displayName,
-    });
-
-    res.redirect(`${env.CLIENT_URL}/settings/accounts?connected=instagram`);
-  }),
-);
+// ── Session ─────────────────────────────────────────────────
 
 router.get("/me", authenticate, getMe);
 

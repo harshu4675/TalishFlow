@@ -16,7 +16,7 @@ const TooltipContent = forwardRef(function TooltipContent(
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          'z-dropdown border-border bg-surface text-foreground shadow-popover animate-scale-in rounded-lg border px-2.5 py-1.5 text-xs font-semibold',
+          'z-tooltip border-border bg-surface text-foreground shadow-popover animate-scale-in rounded-lg border px-2.5 py-1.5 text-xs font-semibold',
           className
         )}
         {...props}

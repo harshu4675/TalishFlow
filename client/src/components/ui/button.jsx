@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, Children, isValidElement } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva } from 'class-variance-authority'
 import { Loader2 } from 'lucide-react'
@@ -44,21 +44,54 @@ const Button = forwardRef(function Button(
     children,
     disabled,
     asChild = false,
+    type,
     ...props
   },
   ref
 ) {
-  const Comp = asChild ? Slot : 'button'
+  // ── asChild: render the child directly with button semantics. ─────
+  // Radix `Slot` requires EXACTLY ONE valid React element child. The
+  // previous implementation also injected a `{loading && <Loader2/>}`
+  // sibling — even when `loading` was false the `false` child counted
+  // as a node (React.Children.count), so EVERY <Button asChild> blew up
+  // with "Slot failed to slot onto its children" under React 19.
+  if (asChild) {
+    const onlyChild = Children.only(children)
+
+    if (!isValidElement(onlyChild)) {
+      if (import.meta.env.DEV) {
+        console.error(
+          '<Button asChild> requires exactly one React element child.',
+          children
+        )
+      }
+      return null
+    }
+
+    return (
+      <Slot
+        ref={ref}
+        className={cn(buttonVariants({ variant, size }), className)}
+        aria-disabled={disabled || loading ? true : undefined}
+        {...props}
+      >
+        {onlyChild}
+      </Slot>
+    )
+  }
+
   return (
-    <Comp
+    <button
       ref={ref}
+      type={type || 'button'}
       className={cn(buttonVariants({ variant, size }), className)}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
       {children}
-    </Comp>
+    </button>
   )
 })
 

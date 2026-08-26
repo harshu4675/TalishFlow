@@ -1,4 +1,4 @@
-import { Zap } from 'lucide-react'
+import { Logo } from '@/components/brand/Logo'
 import { cn } from '@/utils/cn'
 
 export default function PageLoader({ label = 'Loading' }) {
@@ -10,9 +10,7 @@ export default function PageLoader({ label = 'Loading' }) {
     >
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center justify-center gap-2.5">
-          <div className="gradient-primary shadow-primary/25 flex h-10 w-10 items-center justify-center rounded-xl shadow-lg">
-            <Zap className="h-5 w-5 text-white" fill="white" aria-hidden="true" />
-          </div>
+          <Logo className="animate-pulse h-10 w-10" />
           <span className="text-foreground text-lg font-extrabold tracking-tight">
             TalishFlow
           </span>
@@ -28,8 +26,11 @@ export default function PageLoader({ label = 'Loading' }) {
           <div className="skeleton h-40 w-full rounded-xl" />
         </div>
 
-        <p className={cn('text-foreground-faint mt-4 text-center text-xs font-semibold')}>
-          {label}...
+        <div className="tf-loader-bar mx-auto mt-4 h-1 w-40 overflow-hidden rounded-full">
+          <div className="tf-loader-bar-fill" />
+        </div>
+        <p className={cn('text-foreground-faint sr-only mt-4 text-center text-xs font-semibold')}>
+          {label}…
         </p>
       </div>
     </div>
