@@ -320,12 +320,10 @@ async function pollContainerStatus(containerId, accessToken, onProgress) {
   const pollIntervalMs = 5000;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    // eslint-disable-next-line no-await-in-loop
     await sleep(pollIntervalMs);
 
     let statusData;
     try {
-      // eslint-disable-next-line no-await-in-loop
       const statusResponse = await axios.get(
         `${GRAPH_API_BASE}/${containerId}`,
         {

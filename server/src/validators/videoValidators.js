@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { VALID_CLIP_COUNTS } from "../utils/constants.js";
+
+const clipCountSchema = z.coerce.number().int().refine(
+  (count) => VALID_CLIP_COUNTS.includes(count),
+  { message: `Clip count must be one of: ${VALID_CLIP_COUNTS.join(", ")}` },
+);
 
 export const youtubeUrlSchema = z.object({
   url: z
@@ -23,11 +29,11 @@ export const youtubeUrlSchema = z.object({
       { message: "Please provide a valid YouTube video URL" },
     ),
 
-  clipCount: z.coerce.number().int().min(5).max(20).default(10),
+  clipCount: clipCountSchema.default(10),
 });
 
 export const uploadSettingsSchema = z.object({
-  clipCount: z.coerce.number().int().min(5).max(20).default(10),
+  clipCount: clipCountSchema.default(10),
 });
 
 export const resumableInitSchema = z.object({
@@ -38,7 +44,7 @@ export const resumableInitSchema = z.object({
     .positive()
     .max(5 * 1024 * 1024 * 1024),
   totalChunks: z.coerce.number().int().positive().max(2000),
-  clipCount: z.coerce.number().int().min(5).max(20).default(10),
+  clipCount: clipCountSchema.default(10),
 });
 
 export const resumableChunkSchema = z.object({
@@ -49,5 +55,5 @@ export const resumableChunkSchema = z.object({
 
 export const resumableCompleteSchema = z.object({
   uploadId: z.string().min(1),
-  clipCount: z.coerce.number().int().min(5).max(20).default(10),
+  clipCount: clipCountSchema.default(10),
 });

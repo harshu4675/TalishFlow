@@ -38,7 +38,7 @@ function uploadReducer(state, action) {
 
 function createUploadTask({ id, file, clipCount, updateUpload }) {
   const controller = new AbortController()
-  controllerRefs.current.set(id, controller)
+  controllerRefs.set(id, controller)
 
   const start = async () => {
     try {
@@ -80,7 +80,7 @@ function createUploadTask({ id, file, clipCount, updateUpload }) {
 
       throw error
     } finally {
-      controllerRefs.current.delete(id)
+      controllerRefs.delete(id)
     }
   }
 
@@ -99,7 +99,7 @@ export function UploadProvider({ children }) {
   }, [])
 
   const removeUpload = useCallback((id) => {
-    controllerRefs.current.delete(id)
+    controllerRefs.delete(id)
     dispatch({ type: 'REMOVE', payload: id })
   }, [])
 
@@ -193,7 +193,7 @@ export function UploadProvider({ children }) {
 
       if (!upload) return
 
-      controllerRefs.current.get(id)?.abort()
+      controllerRefs.get(id)?.abort()
 
       if (upload.uploadId) {
         try {
