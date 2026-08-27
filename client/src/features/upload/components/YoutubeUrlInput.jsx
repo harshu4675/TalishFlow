@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { Link2, Loader2, ArrowRight } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { isValidYouTubeUrl } from '@/utils/formatters'
@@ -59,7 +60,7 @@ export default function YoutubeUrlInput({ onSubmit, isLoading }) {
         </p>
       )}
 
-      <button
+      <motion.button
         type="submit"
         disabled={isLoading}
         className={cn(
@@ -68,11 +69,21 @@ export default function YoutubeUrlInput({ onSubmit, isLoading }) {
           'shadow-primary/20 shadow-md transition-all duration-150',
           'disabled:cursor-not-allowed disabled:opacity-50'
         )}
+        whileHover={{ scale: isLoading ? 1 : 1.02 }}
+        whileTap={{ scale: isLoading ? 1 : 0.98 }}
+        animate={isLoading ? { scale: [1, 1.02, 1] } : {}}
+        transition={{ duration: isLoading ? 1.5 : 0.2, repeat: isLoading ? Infinity : 0, ease: 'easeInOut' }}
       >
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Adding YouTube video...
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm font-semibold"
+            >
+              Adding YouTube video...
+            </motion.span>
           </>
         ) : (
           <>
@@ -80,7 +91,7 @@ export default function YoutubeUrlInput({ onSubmit, isLoading }) {
             <ArrowRight className="h-4 w-4" />
           </>
         )}
-      </button>
+      </motion.button>
 
       <p className="text-foreground-muted text-center text-xs leading-relaxed">
         Only publicly accessible YouTube videos can be imported.

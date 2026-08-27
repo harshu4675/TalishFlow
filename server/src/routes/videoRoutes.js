@@ -3,7 +3,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { asyncHandler, createError } from "../middleware/errorHandler.js";
 import { validate } from "../middleware/validate.js";
 import { uploadLimiter } from "../middleware/rateLimit.js";
-import uploadVideo from "../config/multer.js";
+import uploadVideo, { uploadChunk } from "../config/multer.js";
 import Video from "../models/Video.js";
 import {
   youtubeUrlSchema,
@@ -15,7 +15,7 @@ import {
   uploadFile,
   importYoutubeVideo,
   initializeResumableUpload,
-  uploadChunk,
+  uploadChunk as uploadChunkController,
   completeResumableUpload,
   getResumableUploadStatus,
   cancelResumableUpload,
@@ -44,9 +44,9 @@ router.post(
 router.post(
   "/resumable/chunk",
   uploadLimiter,
-  uploadVideo.single("chunk"),
+  uploadChunk.single("chunk"),
   validate(resumableChunkSchema),
-  uploadChunk,
+  uploadChunkController,
 );
 
 router.post(
