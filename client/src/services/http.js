@@ -33,9 +33,20 @@ function subscribeTokenRefresh(callback) {
   refreshSubscribers.push(callback)
 }
 
+// Notify all queued requests that the refresh SUCCEEDED with a new token.
 function onTokenRefreshed(token) {
-  refreshSubscribers.forEach((callback) => callback(token))
+  const subscribers = refreshSubscribers
   refreshSubscribers = []
+  subscribers.forEach((callback) => callback(token, null))
+}
+
+// Notify all queued requests that the refresh FAILED. Every subscriber must
+// be invoked (with the error) — dropping them leaves the original requests'
+// promises pending forever and uploads stuck in "Preparing upload".
+function onTokenRefreshFailed(error) {
+  const subscribers = refreshSubscribers
+  refreshSubscribers = []
+  subscribers.forEach((callback) => callback(null, error))
 }
 
 http.interceptors.response.use(
@@ -55,9 +66,18 @@ http.interceptors.response.use(
       !originalRequest.url.includes('/auth/login')
     ) {
       if (isRefreshing) {
-        // Queue the request until refresh completes
-        return new Promise((resolve) => {
-          subscribeTokenRefresh((token) => {
+        // Queue the request until refresh completes — and make sure the
+        // queue ALWAYS settles, even when the refresh itself fails.
+        return new Promise((resolve, reject) => {
+          subscribeTokenRefresh((token, refreshError) => {
+            if (refreshError || !token) {
+              reject(
+                refreshError ||
+                  new Error('Session could not be refreshed. Please sign in again.')
+              )
+              return
+            }
+
             originalRequest.headers.Authorization = `Bearer ${token}`
             resolve(http(originalRequest))
           })
@@ -68,7 +88,7 @@ http.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const response = await http.post('/auth/refresh')
+        const response = await http.post('/auth/refresh', null, { timeout: 15000 })
         const { accessToken } = response.data
 
         window.__talishflow_access_token__ = accessToken
@@ -80,13 +100,22 @@ http.interceptors.response.use(
         return http(originalRequest)
       } catch (refreshError) {
         isRefreshing = false
-        refreshSubscribers = []
 
         window.__talishflow_access_token__ = null
 
         window.dispatchEvent(new CustomEvent('auth:logout'))
 
-        return Promise.reject(refreshError)
+        // Settle every queued request with a meaningful error instead of
+        // orphaning their promises.
+        const message =
+          parseErrorMessage(refreshError) ||
+          'Session expired. Please sign in again.'
+        const sessionError = new Error(message)
+        sessionError.userMessage = message
+        sessionError.code = 'SESSION_EXPIRED'
+        onTokenRefreshFailed(sessionError)
+
+        return Promise.reject(sessionError)
       }
     }
 

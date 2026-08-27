@@ -10,6 +10,11 @@ const UploadContext = createContext(null)
 
 const controllerRefs = new Map()
 
+// In-flight uploads keyed by file identity / URL. Prevents duplicate queue
+// entries when the same selection event fires twice (double click, repeated
+// event handlers, component remounts) before the first upload has started.
+const inflightByKey = new Map()
+
 function uploadReducer(state, action) {
   switch (action.type) {
     case 'ADD':
@@ -34,6 +39,26 @@ function uploadReducer(state, action) {
     default:
       return state
   }
+}
+
+function fileKey(file) {
+  return `file:${file.name}:${file.size}:${file.lastModified}`
+}
+
+function youtubeKey(url) {
+  return `youtube:${url.trim().toLowerCase()}`
+}
+
+function releaseInflight(key, promise) {
+  // Only clear the slot if it still points at THIS promise (a retry or a
+  // new upload may have already replaced it).
+  if (inflightByKey.get(key) === promise) {
+    inflightByKey.delete(key)
+  }
+}
+
+function dropInflight(key) {
+  inflightByKey.delete(key)
 }
 
 function createUploadTask({ id, file, clipCount, updateUpload }) {
@@ -99,12 +124,27 @@ export function UploadProvider({ children }) {
   }, [])
 
   const removeUpload = useCallback((id) => {
+    const upload = uploads.find((item) => item.id === id)
+    if (upload) {
+      const key =
+        upload.kind === 'file' ? fileKey(upload.file) : youtubeKey(upload.name)
+      dropInflight(key)
+    }
     controllerRefs.current.delete(id)
     dispatch({ type: 'REMOVE', payload: id })
-  }, [])
+  }, [uploads])
 
   const startFileUpload = useCallback(
     async ({ file, clipCount = 10 }) => {
+      const key = fileKey(file)
+
+      // Same file already uploading (or initializing) — reuse it instead of
+      // inserting a duplicate queue entry.
+      const existing = inflightByKey.get(key)
+      if (existing) {
+        return existing
+      }
+
       const id = generateId('upload')
 
       addUpload({
@@ -120,7 +160,14 @@ export function UploadProvider({ children }) {
       })
 
       const task = createUploadTask({ id, file, clipCount, updateUpload })
-      return task.start()
+
+      let promise
+      promise = task
+        .start()
+        .finally(() => releaseInflight(key, promise))
+
+      inflightByKey.set(key, promise)
+      return promise
     },
     [addUpload, updateUpload]
   )
@@ -129,6 +176,8 @@ export function UploadProvider({ children }) {
     async (id) => {
       const upload = uploads.find((item) => item.id === id)
       if (!upload?.file) return null
+
+      const key = fileKey(upload.file)
 
       updateUpload(id, { status: 'preparing', error: null, progress: 0 })
 
@@ -139,8 +188,15 @@ export function UploadProvider({ children }) {
         updateUpload,
       })
 
+      let promise
+      promise = task
+        .start()
+        .finally(() => releaseInflight(key, promise))
+
+      inflightByKey.set(key, promise)
+
       try {
-        return await task.start()
+        return await promise
       } catch {
         return null
       }
@@ -150,6 +206,13 @@ export function UploadProvider({ children }) {
 
   const startYoutubeUpload = useCallback(
     async ({ url, clipCount = 10 }) => {
+      const key = youtubeKey(url)
+
+      const existing = inflightByKey.get(key)
+      if (existing) {
+        return existing
+      }
+
       const id = generateId('youtube')
 
       addUpload({
@@ -162,27 +225,35 @@ export function UploadProvider({ children }) {
         createdAt: Date.now(),
       })
 
-      try {
-        const result = await uploadYouTubeUrl({ url, clipCount })
+      let promise
+      promise = (async () => {
+        try {
+          const result = await uploadYouTubeUrl({ url, clipCount })
 
-        updateUpload(id, {
-          status: 'queued',
-          progress: 100,
-          videoId: result.video._id,
-          processingJobId: result.processingJob._id,
-          name: result.video.title,
-          thumbnailUrl: result.video.thumbnailUrl,
-        })
+          updateUpload(id, {
+            status: 'queued',
+            progress: 100,
+            videoId: result.video._id,
+            processingJobId: result.processingJob._id,
+            name: result.video.title,
+            thumbnailUrl: result.video.thumbnailUrl,
+          })
 
-        return result
-      } catch (error) {
-        updateUpload(id, {
-          status: 'failed',
-          error: parseErrorMessage(error),
-        })
+          return result
+        } catch (error) {
+          updateUpload(id, {
+            status: 'failed',
+            error: parseErrorMessage(error),
+          })
 
-        throw error
-      }
+          throw error
+        } finally {
+          releaseInflight(key, promise)
+        }
+      })()
+
+      inflightByKey.set(key, promise)
+      return promise
     },
     [addUpload, updateUpload]
   )
@@ -202,6 +273,12 @@ export function UploadProvider({ children }) {
           updateUpload(id, { status: 'cancelled' })
         }
       }
+
+      // Release the dedupe slot so the user can immediately re-add the
+      // same file/URL after cancelling.
+      const key =
+        upload.kind === 'file' ? fileKey(upload.file) : youtubeKey(upload.name)
+      dropInflight(key)
 
       updateUpload(id, { status: 'cancelled' })
     },

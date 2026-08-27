@@ -49,10 +49,26 @@ export async function copyToClipboard(text) {
 export function parseErrorMessage(error) {
   if (!error) return 'An unexpected error occurred'
   if (typeof error === 'string') return error
-  if (error.response?.data?.message) return error.response.data.message
-  if (error.response?.data?.errors?.[0]?.message) {
-    return error.response.data.errors[0].message
+
+  const data = error.response?.data
+  const baseMessage =
+    data?.message || error.userMessage || error.message || 'An unexpected error occurred'
+
+  // Surface field-level details behind generic backend messages
+  // (e.g. "Validation failed" → which field and why).
+  const fieldError = data?.errors?.[0]
+  if (fieldError?.message && baseMessage === 'Validation failed') {
+    const fieldPrefix = fieldError.field ? `${fieldError.field}: ` : ''
+    return `Validation failed — ${fieldPrefix}${fieldError.message}`
   }
-  if (error.message) return error.message
-  return 'An unexpected error occurred'
+
+  // Network-level failures without a response body
+  if (!error.response && error.code === 'ECONNABORTED') {
+    return 'The request timed out. Please check your connection and try again.'
+  }
+  if (!error.response && !data) {
+    return 'Could not reach the server. Please check your connection and try again.'
+  }
+
+  return baseMessage
 }

@@ -72,6 +72,16 @@ processingQueue.process("process-video", 2, async (queueJob) => {
   const video = await Video.findById(videoId);
 
   if (!job || !video) {
+    logger.error("Processing job or video record missing — aborting without retry", {
+      processingJobId,
+      videoId,
+      hasJob: Boolean(job),
+      hasVideo: Boolean(video),
+    });
+
+    // Record-level failures will not fix themselves on retry.
+    queueJob.updateProgress(0).catch(() => {});
+    queueJob.attemptsMade = queueJob.opts.attempts;
     throw new Error("Processing job or video record not found in database");
   }
 
@@ -371,22 +381,28 @@ processingQueue.process("process-video", 2, async (queueJob) => {
     logger.error("Processing job failed", {
       processingJobId,
       videoId,
+      code: error.code || "PROCESSING_FAILED",
       error: error.message,
     });
+
+    const failureMessage = error.message || "Processing failed";
+    const failureCode =
+      error.code && typeof error.code === "string" ? error.code : null;
 
     await Promise.all([
       ProcessingJob.findByIdAndUpdate(processingJobId, {
         status: "failed",
-        errorMessage: error.message,
+        errorMessage: failureMessage,
+        errorStack: error.stack,
         completedAt: new Date(),
       }),
       Video.findByIdAndUpdate(videoId, {
         processingStatus: "failed",
-        processingError: error.message,
+        processingError: failureMessage,
       }),
     ]);
 
-    emitProcessingError(userId, processingJobId, error.message);
+    emitProcessingError(userId, processingJobId, failureMessage, failureCode);
 
     try {
       await fs.rm(workDirectory, { recursive: true, force: true });

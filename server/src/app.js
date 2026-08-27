@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 import { env } from "./config/env.js";
 import { connectDatabase } from "./config/database.js";
 import { connectRedis } from "./config/redis.js";
+import { runDependencyDiagnostics } from "./config/diagnostics.js";
 import { configurePassport } from "./config/passport.js";
 import logger from "./utils/logger.js";
 import requestLogger from "./middleware/requestLogger.js";
@@ -110,6 +111,10 @@ export async function startApp() {
 
     const redis = await connectRedis();
     app.set("redis", redis);
+
+    // Surface missing external dependencies (ffmpeg, yt-dlp, python)
+    // with actionable messages instead of failing mid-job later.
+    runDependencyDiagnostics();
 
     const server = app.listen(env.PORT, () => {
       logger.info(

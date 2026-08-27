@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/authenticate.js";
 import { asyncHandler, createError } from "../middleware/errorHandler.js";
 import { validate } from "../middleware/validate.js";
-import { uploadLimiter } from "../middleware/rateLimit.js";
+import { uploadLimiter, uploadTransferLimiter } from "../middleware/rateLimit.js";
 import uploadVideo, { uploadChunk } from "../config/multer.js";
 import Video from "../models/Video.js";
 import {
@@ -43,7 +43,7 @@ router.post(
 
 router.post(
   "/resumable/chunk",
-  uploadLimiter,
+  uploadTransferLimiter,
   uploadChunk.single("chunk"),
   validate(resumableChunkSchema),
   uploadChunkController,
@@ -51,7 +51,7 @@ router.post(
 
 router.post(
   "/resumable/complete",
-  uploadLimiter,
+  uploadTransferLimiter,
   validate(resumableCompleteSchema),
   completeResumableUpload,
 );

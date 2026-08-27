@@ -3,15 +3,14 @@ import path from "path";
 import crypto from "crypto";
 import { asyncHandler, createError } from "../middleware/errorHandler.js";
 import logger from "../utils/logger.js";
+import Video from "../models/Video.js";
 import {
   createUploadedVideo,
   createYoutubeVideo,
-  sanitizeFilename,
 } from "../services/videoService.js";
 import {
   ensureDirectory,
   getTemporaryUploadDirectory,
-  getUserUploadDirectory,
   mergeChunks,
   deleteDirectory,
   deleteFile,
@@ -37,7 +36,9 @@ function validateFileExtension(filename) {
 
 export const uploadFile = asyncHandler(async (req, res) => {
   if (!req.file) {
-    throw createError("Video file is required", 400);
+    throw createError("Video file is required", 400, {
+      code: "UPLOAD_FILE_MISSING",
+    });
   }
 
   const clipCount = Number(req.body.clipCount || 10);
@@ -48,7 +49,26 @@ export const uploadFile = asyncHandler(async (req, res) => {
     clipCount,
   });
 
-  const queueJob = await enqueueProcessingJob(processingJob);
+  let queueJob;
+  try {
+    queueJob = await enqueueProcessingJob(processingJob);
+  } catch (error) {
+    logger.error("Failed to enqueue upload processing job", {
+      videoId: video._id,
+      error: error.message,
+    });
+    await Video.findByIdAndDelete(video._id).catch(() => {});
+    await processingJob.deleteOne().catch(() => {});
+    await deleteFile(req.file.path).catch(() => {});
+    throw createError(
+      "The video was stored but could not be queued for processing. Please try again.",
+      503,
+      {
+        code: "PROCESSING_QUEUE_UNAVAILABLE",
+        details: "The background processing queue is not reachable.",
+      },
+    );
+  }
 
   processingJob.bullJobId = String(queueJob.id);
   await processingJob.save();
@@ -73,7 +93,9 @@ export const importYoutubeVideo = asyncHandler(async (req, res) => {
   const { url, clipCount } = req.body;
 
   if (!url) {
-    throw createError("YouTube URL is required", 400);
+    throw createError("YouTube URL is required", 400, {
+      code: "YOUTUBE_URL_MISSING",
+    });
   }
 
   const videoId = extractYouTubeVideoId(url);
@@ -82,6 +104,7 @@ export const importYoutubeVideo = asyncHandler(async (req, res) => {
     throw createError(
       "Invalid YouTube URL. Please provide a valid YouTube video URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID)",
       400,
+      { code: "YOUTUBE_INVALID_URL" },
     );
   }
 
@@ -89,11 +112,21 @@ export const importYoutubeVideo = asyncHandler(async (req, res) => {
   try {
     metadata = await getYouTubeMetadata(url);
   } catch (error) {
-    logger.error("Failed to get YouTube metadata", {
-      url,
-      videoId,
-      error: error.message,
-    });
+    if (error.statusCode < 500) {
+      // Expected, client-facing failures (invalid URL / video not found)
+      logger.warn("YouTube import rejected", {
+        url,
+        videoId,
+        code: error.code,
+        error: error.message,
+      });
+    } else {
+      logger.error("Failed to get YouTube metadata", {
+        url,
+        videoId,
+        error: error.message,
+      });
+    }
     throw error;
   }
 
@@ -125,8 +158,12 @@ export const importYoutubeVideo = asyncHandler(async (req, res) => {
     await Video.findByIdAndDelete(video._id).catch(() => {});
     await processingJob.deleteOne().catch(() => {});
     throw createError(
-      "Failed to queue video for processing. Please try again later.",
-      500,
+      "The YouTube video was accepted but could not be queued for processing. Please try again.",
+      503,
+      {
+        code: "PROCESSING_QUEUE_UNAVAILABLE",
+        details: "The background processing queue is not reachable.",
+      },
     );
   }
 
@@ -155,7 +192,11 @@ export const initializeResumableUpload = asyncHandler(async (req, res) => {
   const extension = path.extname(filename).toLowerCase();
 
   if (!validExtensions.includes(extension)) {
-    throw createError("Unsupported file format", 415);
+    throw createError(
+      "Unsupported file format. Use MP4, MOV, MKV, AVI, or WebM.",
+      415,
+      { code: "UPLOAD_UNSUPPORTED_FORMAT" },
+    );
   }
 
   const uploadId = crypto.randomUUID();
@@ -198,7 +239,9 @@ export const uploadChunk = asyncHandler(async (req, res) => {
   const { uploadId, chunkIndex, totalChunks } = req.body;
 
   if (!req.file) {
-    throw createError("Upload chunk is required", 400);
+    throw createError("Upload chunk is required", 400, {
+      code: "UPLOAD_CHUNK_MISSING",
+    });
   }
 
   const redis = req.app.get("redis");
@@ -206,19 +249,25 @@ export const uploadChunk = asyncHandler(async (req, res) => {
 
   if (!sessionRaw) {
     await deleteFile(req.file.path).catch(() => {});
-    throw createError("Upload session expired or was not found", 404);
+    throw createError("Upload session expired or was not found", 404, {
+      code: "UPLOAD_SESSION_NOT_FOUND",
+    });
   }
 
   const session = JSON.parse(sessionRaw);
 
   if (session.userId !== req.user.id) {
     await deleteFile(req.file.path).catch(() => {});
-    throw createError("You do not have access to this upload session", 403);
+    throw createError("You do not have access to this upload session", 403, {
+      code: "UPLOAD_SESSION_FORBIDDEN",
+    });
   }
 
   if (Number(totalChunks) !== Number(session.totalChunks)) {
     await deleteFile(req.file.path).catch(() => {});
-    throw createError("Invalid total chunk count", 400);
+    throw createError("Invalid total chunk count", 400, {
+      code: "UPLOAD_CHUNK_INVALID",
+    });
   }
 
   if (
@@ -226,7 +275,9 @@ export const uploadChunk = asyncHandler(async (req, res) => {
     Number(chunkIndex) >= Number(session.totalChunks)
   ) {
     await deleteFile(req.file.path).catch(() => {});
-    throw createError("Invalid chunk index", 400);
+    throw createError("Invalid chunk index", 400, {
+      code: "UPLOAD_CHUNK_INVALID",
+    });
   }
 
   const temporaryDirectory = await ensureDirectory(
@@ -248,8 +299,12 @@ export const uploadChunk = asyncHandler(async (req, res) => {
     });
     await deleteFile(req.file.path).catch(() => {});
     throw createError(
-      `Failed to store chunk ${chunkIndex}: ${error.message}`,
+      `Failed to store chunk ${chunkIndex}`,
       500,
+      {
+        code: "UPLOAD_CHUNK_STORE_FAILED",
+        details: error.message,
+      },
     );
   }
 
@@ -297,19 +352,24 @@ export const completeResumableUpload = asyncHandler(async (req, res) => {
   const sessionRaw = await redis.get(getUploadSessionKey(uploadId));
 
   if (!sessionRaw) {
-    throw createError("Upload session expired or was not found", 404);
+    throw createError("Upload session expired or was not found", 404, {
+      code: "UPLOAD_SESSION_NOT_FOUND",
+    });
   }
 
   const session = JSON.parse(sessionRaw);
 
   if (session.userId !== req.user.id) {
-    throw createError("You do not have access to this upload session", 403);
+    throw createError("You do not have access to this upload session", 403, {
+      code: "UPLOAD_SESSION_FORBIDDEN",
+    });
   }
 
   if (session.receivedChunks.length !== session.totalChunks) {
     throw createError(
       "All upload chunks must be uploaded before completion",
       400,
+      { code: "UPLOAD_CHUNKS_MISSING" },
     );
   }
 
@@ -327,7 +387,14 @@ export const completeResumableUpload = asyncHandler(async (req, res) => {
 
   if (fileSize !== Number(session.fileSize)) {
     await deleteFile(mergedPath);
-    throw createError("Uploaded file size verification failed", 400);
+    throw createError(
+      "Uploaded file size verification failed",
+      400,
+      {
+        code: "UPLOAD_SIZE_MISMATCH",
+        details: `Expected ${session.fileSize} bytes but stored ${fileSize} bytes.`,
+      },
+    );
   }
 
   const file = {
@@ -344,7 +411,28 @@ export const completeResumableUpload = asyncHandler(async (req, res) => {
     clipCount: clipCount || session.clipCount,
   });
 
-  const queueJob = await enqueueProcessingJob(processingJob);
+  let queueJob;
+  try {
+    queueJob = await enqueueProcessingJob(processingJob);
+  } catch (error) {
+    logger.error("Failed to enqueue resumable upload processing job", {
+      videoId: video._id,
+      uploadId,
+      error: error.message,
+    });
+    await Video.findByIdAndDelete(video._id).catch(() => {});
+    await processingJob.deleteOne().catch(() => {});
+    await deleteFile(mergedPath).catch(() => {});
+    await redis.del(getUploadSessionKey(uploadId)).catch(() => {});
+    throw createError(
+      "The video was stored but could not be queued for processing. Please try again.",
+      503,
+      {
+        code: "PROCESSING_QUEUE_UNAVAILABLE",
+        details: "The background processing queue is not reachable.",
+      },
+    );
+  }
 
   processingJob.bullJobId = String(queueJob.id);
   await processingJob.save();
@@ -373,13 +461,17 @@ export const getResumableUploadStatus = asyncHandler(async (req, res) => {
   const sessionRaw = await redis.get(getUploadSessionKey(uploadId));
 
   if (!sessionRaw) {
-    throw createError("Upload session expired or was not found", 404);
+    throw createError("Upload session expired or was not found", 404, {
+      code: "UPLOAD_SESSION_NOT_FOUND",
+    });
   }
 
   const session = JSON.parse(sessionRaw);
 
   if (session.userId !== req.user.id) {
-    throw createError("You do not have access to this upload session", 403);
+    throw createError("You do not have access to this upload session", 403, {
+      code: "UPLOAD_SESSION_FORBIDDEN",
+    });
   }
 
   res.json({
@@ -404,7 +496,9 @@ export const cancelResumableUpload = asyncHandler(async (req, res) => {
     const session = JSON.parse(sessionRaw);
 
     if (session.userId !== req.user.id) {
-      throw createError("You do not have access to this upload session", 403);
+      throw createError("You do not have access to this upload session", 403, {
+        code: "UPLOAD_SESSION_FORBIDDEN",
+      });
     }
 
     await deleteDirectory(getTemporaryUploadDirectory(req.user.id, uploadId));

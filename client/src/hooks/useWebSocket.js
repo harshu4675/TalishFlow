@@ -15,12 +15,21 @@ export default function useProcessingSocket(handlers = {}) {
   useEffect(() => {
     if (!isAuthenticated) return
 
+    // The server authenticates the socket via the handshake auth token
+    // (the access token lives in JS memory, not a cookie). Note: the
+    // socket.io client's function-form auth MUST invoke its callback —
+    // returning a value alone leaves the handshake pending forever.
+    // The function form re-reads the token on every (re)connection, so
+    // token refreshes are picked up automatically.
     const socket = io('/', {
       withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      auth: (callback) => {
+        callback({ token: window.__talishflow_access_token__ || null })
+      },
     })
 
     socketRef.current = socket
