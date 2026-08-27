@@ -1,5 +1,6 @@
 import http from './http'
 import { UPLOAD_CONFIG } from '@/utils/constants'
+import { parseErrorMessage } from '@/utils/helpers'
 
 const CHUNK_SIZE = UPLOAD_CONFIG.CHUNK_SIZE
 
@@ -13,15 +14,20 @@ function createChunk(file, index) {
 async function initializeUpload(file, clipCount) {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
 
-  const response = await http.post('/videos/resumable/init', {
-    filename: file.name,
-    mimeType: file.type,
-    fileSize: file.size,
-    totalChunks,
-    clipCount,
-  })
+  try {
+    const response = await http.post('/videos/resumable/init', {
+      filename: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+      totalChunks,
+      clipCount,
+    })
 
-  return response.data.data
+    return response.data.data
+  } catch (error) {
+    const message = parseErrorMessage(error)
+    throw new Error(message)
+  }
 }
 
 async function uploadChunk({ uploadId, chunk, chunkIndex, totalChunks, signal }) {
@@ -32,29 +38,44 @@ async function uploadChunk({ uploadId, chunk, chunkIndex, totalChunks, signal })
   formData.append('chunkIndex', String(chunkIndex))
   formData.append('totalChunks', String(totalChunks))
 
-  const response = await http.post('/videos/resumable/chunk', formData, {
-    signal,
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    timeout: 0,
-  })
+  try {
+    const response = await http.post('/videos/resumable/chunk', formData, {
+      signal,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 0,
+    })
 
-  return response.data.data
+    return response.data.data
+  } catch (error) {
+    const message = parseErrorMessage(error)
+    throw new Error(message)
+  }
 }
 
 async function completeUpload(uploadId, clipCount) {
-  const response = await http.post('/videos/resumable/complete', {
-    uploadId,
-    clipCount,
-  })
+  try {
+    const response = await http.post('/videos/resumable/complete', {
+      uploadId,
+      clipCount,
+    })
 
-  return response.data.data
+    return response.data.data
+  } catch (error) {
+    const message = parseErrorMessage(error)
+    throw new Error(message)
+  }
 }
 
 export async function cancelUpload(uploadId) {
-  const response = await http.delete(`/videos/resumable/${uploadId}`)
-  return response.data
+  try {
+    const response = await http.delete(`/videos/resumable/${uploadId}`)
+    return response.data
+  } catch (error) {
+    const message = parseErrorMessage(error)
+    throw new Error(message)
+  }
 }
 
 export async function uploadResumableVideo({
@@ -64,7 +85,17 @@ export async function uploadResumableVideo({
   onStateChange,
   signal,
 }) {
-  const session = await initializeUpload(file, clipCount)
+  let session
+  try {
+    session = await initializeUpload(file, clipCount)
+  } catch (error) {
+    onStateChange?.({
+      status: 'failed',
+      error: error.message || 'Failed to initialize upload',
+    })
+    throw error
+  }
+
   const { uploadId, totalChunks } = session
 
   onStateChange?.({
@@ -83,13 +114,23 @@ export async function uploadResumableVideo({
 
       const chunk = createChunk(file, chunkIndex)
 
-      await uploadChunk({
-        uploadId,
-        chunk,
-        chunkIndex,
-        totalChunks,
-        signal,
-      })
+      try {
+        await uploadChunk({
+          uploadId,
+          chunk,
+          chunkIndex,
+          totalChunks,
+          signal,
+        })
+      } catch (chunkError) {
+        onStateChange?.({
+          uploadId,
+          status: 'failed',
+          error: `Failed to upload chunk ${chunkIndex + 1}/${totalChunks}: ${chunkError.message}`,
+          progress: Math.round(((chunkIndex + 1) / totalChunks) * 100),
+        })
+        throw chunkError
+      }
 
       const uploadedChunks = chunkIndex + 1
       const progress = Math.round((uploadedChunks / totalChunks) * 100)
@@ -112,7 +153,18 @@ export async function uploadResumableVideo({
       uploadedChunks: totalChunks,
     })
 
-    const result = await completeUpload(uploadId, clipCount)
+    let result
+    try {
+      result = await completeUpload(uploadId, clipCount)
+    } catch (completeError) {
+      onStateChange?.({
+        uploadId,
+        status: 'failed',
+        error: `Failed to finalize upload: ${completeError.message}`,
+        progress: 100,
+      })
+      throw completeError
+    }
 
     onStateChange?.({
       uploadId,
@@ -125,7 +177,7 @@ export async function uploadResumableVideo({
 
     return result
   } catch (error) {
-    if (error.name !== 'AbortError') {
+    if (error.name !== 'AbortError' && uploadId) {
       onStateChange?.({
         uploadId,
         status: 'failed',
@@ -138,10 +190,18 @@ export async function uploadResumableVideo({
 }
 
 export async function uploadYouTubeUrl({ url, clipCount }) {
-  const response = await http.post('/videos/youtube', {
-    url,
-    clipCount,
-  })
+  try {
+    const response = await http.post('/videos/youtube', {
+      url,
+      clipCount,
+    })
 
-  return response.data.data
+    return response.data.data
+  } catch (error) {
+    const message = parseErrorMessage(error)
+    const enhancedError = new Error(message)
+    enhancedError.userMessage = message
+    enhancedError.details = error.response?.data
+    throw enhancedError
+  }
 }

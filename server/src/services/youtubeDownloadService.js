@@ -3,6 +3,30 @@ import path from "path";
 import { env } from "../config/env.js";
 import { ensureDirectory, getUserUploadDirectory } from "./storageService.js";
 import logger from "../utils/logger.js";
+import { createError } from "../middleware/errorHandler.js";
+
+function getYtDlpPath() {
+  const paths = [
+    "yt-dlp",
+    "/usr/local/bin/yt-dlp",
+    "/usr/bin/yt-dlp",
+    process.env.YT_DLP_PATH,
+    path.join(process.env.HOME || "/home/user", ".local", "bin", "yt-dlp"),
+  ];
+
+  for (const p of paths) {
+    if (p && p.trim()) {
+      try {
+        require("fs").accessSync(p, require("fs").constants.X_OK);
+        return p;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return "yt-dlp";
+}
 
 export async function downloadYouTubeVideo({
   videoId,
@@ -12,6 +36,8 @@ export async function downloadYouTubeVideo({
 }) {
   const userDirectory = await ensureDirectory(getUserUploadDirectory(userId));
   const outputTemplate = path.join(userDirectory, outputFilename);
+
+  const ytDlpPath = getYtDlpPath();
 
   return new Promise((resolve, reject) => {
     const args = [
@@ -26,17 +52,25 @@ export async function downloadYouTubeVideo({
       "--newline",
       "--merge-output-format",
       "mp4",
+      "--retries",
+      "3",
+      "--timeout",
+      "60",
     ];
 
-    const process = spawn("yt-dlp", args, {
+    logger.info("Starting YouTube download", { videoId, ytDlpPath, outputTemplate });
+
+    const process = spawn(ytDlpPath, args, {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
     let downloadedPath = null;
     let stderr = "";
+    let stdout = "";
 
     process.stdout.on("data", (data) => {
       const line = data.toString();
+      stdout += line;
 
       const progressMatch = line.match(/(\d+\.?\d*)%/);
 
@@ -67,25 +101,36 @@ export async function downloadYouTubeVideo({
         logger.error("yt-dlp download failed", {
           code,
           videoId,
-          stderr: stderr.slice(0, 500),
+          stderr: stderr.slice(0, 1000),
+          stdout: stdout.slice(0, 1000),
+          ytDlpPath,
         });
         return reject(
-          new Error(
-            `YouTube download failed (code ${code}). The video may be unavailable or restricted.`,
+          createError(
+            `YouTube download failed (code ${code}). The video may be unavailable, restricted, or yt-dlp is not properly installed.`,
+            500,
           ),
         );
       }
 
       const finalPath = downloadedPath || outputTemplate;
 
+      logger.info("YouTube download completed", { videoId, finalPath });
       resolve(finalPath);
     });
 
     process.on("error", (error) => {
+      logger.error("yt-dlp spawn error", {
+        videoId,
+        error: error.message,
+        ytDlpPath,
+      });
+
       if (error.code === "ENOENT") {
         return reject(
-          new Error(
-            "yt-dlp is not installed. Install it with: pip install yt-dlp",
+          createError(
+            `yt-dlp is not installed or not found in PATH. Please install it with: pip install yt-dlp. Tried paths: ${paths.join(", ")}`,
+            500,
           ),
         );
       }
@@ -94,3 +139,10 @@ export async function downloadYouTubeVideo({
     });
   });
 }
+
+const paths = [
+  "yt-dlp",
+  "/usr/local/bin/yt-dlp",
+  "/usr/bin/yt-dlp",
+  path.join(process.env.HOME || "/home/user", ".local", "bin", "yt-dlp"),
+];

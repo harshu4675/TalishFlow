@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { asyncHandler, createError } from "../middleware/errorHandler.js";
+import logger from "../utils/logger.js";
 import {
   createUploadedVideo,
   createYoutubeVideo,
@@ -27,6 +28,11 @@ const validExtensions = [".mp4", ".mov", ".mkv", ".avi", ".webm"];
 
 function getUploadSessionKey(uploadId) {
   return `talishflow:upload:${uploadId}`;
+}
+
+function validateFileExtension(filename) {
+  const extension = path.extname(filename).toLowerCase();
+  return validExtensions.includes(extension);
 }
 
 export const uploadFile = asyncHandler(async (req, res) => {
@@ -65,28 +71,74 @@ export const uploadFile = asyncHandler(async (req, res) => {
 
 export const importYoutubeVideo = asyncHandler(async (req, res) => {
   const { url, clipCount } = req.body;
+
+  if (!url) {
+    throw createError("YouTube URL is required", 400);
+  }
+
   const videoId = extractYouTubeVideoId(url);
 
   if (!videoId) {
-    throw createError("Invalid YouTube URL", 400);
+    throw createError(
+      "Invalid YouTube URL. Please provide a valid YouTube video URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID)",
+      400,
+    );
   }
 
-  const metadata = await getYouTubeMetadata(url);
+  let metadata;
+  try {
+    metadata = await getYouTubeMetadata(url);
+  } catch (error) {
+    logger.error("Failed to get YouTube metadata", {
+      url,
+      videoId,
+      error: error.message,
+    });
+    throw error;
+  }
+
+  logger.info("Creating YouTube video record", {
+    userId: req.user.id,
+    url,
+    videoId: metadata.videoId,
+    title: metadata.title,
+  });
 
   const { video, processingJob } = await createYoutubeVideo({
     userId: req.user.id,
     url,
     youtubeVideoId: metadata.videoId,
-    title: metadata.title,
+    title: metadata.title || `YouTube Video - ${metadata.videoId}`,
     thumbnailUrl: metadata.thumbnailUrl,
     duration: metadata.duration,
     clipCount,
   });
 
-  const queueJob = await enqueueProcessingJob(processingJob);
+  let queueJob;
+  try {
+    queueJob = await enqueueProcessingJob(processingJob);
+  } catch (error) {
+    logger.error("Failed to enqueue YouTube processing job", {
+      processingJobId: processingJob._id,
+      error: error.message,
+    });
+    await Video.findByIdAndDelete(video._id).catch(() => {});
+    await processingJob.deleteOne().catch(() => {});
+    throw createError(
+      "Failed to queue video for processing. Please try again later.",
+      500,
+    );
+  }
 
   processingJob.bullJobId = String(queueJob.id);
   await processingJob.save();
+
+  logger.info("YouTube video queued for processing", {
+    userId: req.user.id,
+    videoId: video._id,
+    processingJobId: processingJob._id,
+    bullJobId: queueJob.id,
+  });
 
   res.status(201).json({
     success: true,
@@ -153,16 +205,19 @@ export const uploadChunk = asyncHandler(async (req, res) => {
   const sessionRaw = await redis.get(getUploadSessionKey(uploadId));
 
   if (!sessionRaw) {
+    await deleteFile(req.file.path).catch(() => {});
     throw createError("Upload session expired or was not found", 404);
   }
 
   const session = JSON.parse(sessionRaw);
 
   if (session.userId !== req.user.id) {
+    await deleteFile(req.file.path).catch(() => {});
     throw createError("You do not have access to this upload session", 403);
   }
 
   if (Number(totalChunks) !== Number(session.totalChunks)) {
+    await deleteFile(req.file.path).catch(() => {});
     throw createError("Invalid total chunk count", 400);
   }
 
@@ -170,6 +225,7 @@ export const uploadChunk = asyncHandler(async (req, res) => {
     Number(chunkIndex) < 0 ||
     Number(chunkIndex) >= Number(session.totalChunks)
   ) {
+    await deleteFile(req.file.path).catch(() => {});
     throw createError("Invalid chunk index", 400);
   }
 
@@ -179,7 +235,23 @@ export const uploadChunk = asyncHandler(async (req, res) => {
 
   const chunkPath = path.join(temporaryDirectory, `${chunkIndex}.part`);
 
-  await fs.rename(req.file.path, chunkPath);
+  try {
+    await fs.copyFile(req.file.path, chunkPath);
+    await deleteFile(req.file.path);
+  } catch (error) {
+    logger.error("Failed to move chunk file", {
+      uploadId,
+      chunkIndex,
+      source: req.file.path,
+      destination: chunkPath,
+      error: error.message,
+    });
+    await deleteFile(req.file.path).catch(() => {});
+    throw createError(
+      `Failed to store chunk ${chunkIndex}: ${error.message}`,
+      500,
+    );
+  }
 
   if (!session.receivedChunks.includes(Number(chunkIndex))) {
     session.receivedChunks.push(Number(chunkIndex));
@@ -191,6 +263,13 @@ export const uploadChunk = asyncHandler(async (req, res) => {
 
   await redis.set(getUploadSessionKey(uploadId), JSON.stringify(session), {
     EX: 24 * 60 * 60,
+  });
+
+  logger.info("Chunk uploaded", {
+    uploadId,
+    chunkIndex,
+    userId: req.user.id,
+    progress,
   });
 
   emitUploadProgress(req.user.id, uploadId, {
