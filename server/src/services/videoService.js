@@ -4,8 +4,29 @@ import Video from "../models/Video.js";
 import ProcessingJob from "../models/ProcessingJob.js";
 import { createError } from "../middleware/errorHandler.js";
 import { getFileSize } from "./storageService.js";
+import { parseIso8601Duration } from "./youtubeMetadataService.js";
 
 const VIDEO_TTL_HOURS = 24;
+
+const MAX_TITLE_LENGTH = 200; // must match Video.title maxlength
+
+function normalizeTitle(title, fallback = "Video") {
+  const cleaned =
+    typeof title === "string" ? title.replace(/\s+/g, " ").trim() : null;
+  if (!cleaned) return fallback;
+  return cleaned.length > MAX_TITLE_LENGTH
+    ? cleaned.slice(0, MAX_TITLE_LENGTH).trim()
+    : cleaned;
+}
+
+/**
+ * Duration must be stored as whole seconds (Number) — the Video schema
+ * rejects anything else with a validation error.
+ */
+function normalizeDuration(duration) {
+  const seconds = parseIso8601Duration(duration);
+  return seconds !== null && seconds >= 0 ? seconds : null;
+}
 
 export function getScheduledDeletionDate() {
   return new Date(Date.now() + VIDEO_TTL_HOURS * 60 * 60 * 1000);
@@ -29,9 +50,9 @@ export async function createUploadedVideo({ userId, file, clipCount = 10 }) {
     throw createError("Uploaded file is required", 400);
   }
 
-  const title = path.basename(
-    file.originalname,
-    path.extname(file.originalname),
+  const title = normalizeTitle(
+    path.basename(file.originalname, path.extname(file.originalname)),
+    "Video",
   );
   const scheduledDeletion = getScheduledDeletionDate();
 
@@ -77,12 +98,12 @@ export async function createYoutubeVideo({
 
   const video = await Video.create({
     userId,
-    title: title || "YouTube Video",
+    title: normalizeTitle(title, "YouTube Video"),
     source: "youtube",
     youtubeUrl: url,
     youtubeVideoId,
-    thumbnailUrl,
-    duration,
+    thumbnailUrl: typeof thumbnailUrl === "string" ? thumbnailUrl : null,
+    duration: normalizeDuration(duration),
     processingStatus: "queued",
     processingProgress: 0,
     scheduledDeletion,

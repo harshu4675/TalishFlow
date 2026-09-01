@@ -66,6 +66,8 @@ const envSchema = z.object({
   // Processing
   FFMPEG_PATH: z.string().optional(),
   FFPROBE_PATH: z.string().optional(),
+  // Optional: explicit path to a yt-dlp binary (used for YouTube imports)
+  YT_DLP_PATH: z.string().optional(),
   WHISPER_MODEL: z
     .enum(["tiny", "base", "small", "medium", "large"])
     .default("base"),

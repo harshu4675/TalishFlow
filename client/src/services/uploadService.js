@@ -11,22 +11,39 @@ function createChunk(file, index) {
   return file.slice(start, end)
 }
 
-async function initializeUpload(file, clipCount) {
+function toUploadError(error, fallbackMessage) {
+  const message = parseErrorMessage(error)
+  const uploadError = new Error(message)
+  uploadError.userMessage = message
+  uploadError.code = error.response?.data?.code || null
+  uploadError.details = error.response?.data?.details || null
+  if (!message || message === 'An unexpected error occurred') {
+    uploadError.message = fallbackMessage
+    uploadError.userMessage = fallbackMessage
+  }
+  return uploadError
+}
+
+async function initializeUpload(file, clipCount, signal) {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
 
   try {
-    const response = await http.post('/videos/resumable/init', {
-      filename: file.name,
-      mimeType: file.type,
-      fileSize: file.size,
-      totalChunks,
-      clipCount,
-    })
+    const response = await http.post(
+      '/videos/resumable/init',
+      {
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        totalChunks,
+        clipCount,
+      },
+      { signal }
+    )
 
     return response.data.data
   } catch (error) {
-    const message = parseErrorMessage(error)
-    throw new Error(message)
+    if (error.name === 'AbortError') throw error
+    throw toUploadError(error, 'Failed to initialize upload')
   }
 }
 
@@ -49,22 +66,26 @@ async function uploadChunk({ uploadId, chunk, chunkIndex, totalChunks, signal })
 
     return response.data.data
   } catch (error) {
-    const message = parseErrorMessage(error)
-    throw new Error(message)
+    if (error.name === 'AbortError') throw error
+    throw toUploadError(error, `Failed to upload chunk ${chunkIndex + 1}/${totalChunks}`)
   }
 }
 
-async function completeUpload(uploadId, clipCount) {
+async function completeUpload(uploadId, clipCount, signal) {
   try {
-    const response = await http.post('/videos/resumable/complete', {
-      uploadId,
-      clipCount,
-    })
+    const response = await http.post(
+      '/videos/resumable/complete',
+      {
+        uploadId,
+        clipCount,
+      },
+      { signal }
+    )
 
     return response.data.data
   } catch (error) {
-    const message = parseErrorMessage(error)
-    throw new Error(message)
+    if (error.name === 'AbortError') throw error
+    throw toUploadError(error, 'Failed to finalize upload')
   }
 }
 
@@ -73,8 +94,8 @@ export async function cancelUpload(uploadId) {
     const response = await http.delete(`/videos/resumable/${uploadId}`)
     return response.data
   } catch (error) {
-    const message = parseErrorMessage(error)
-    throw new Error(message)
+    if (error.name === 'AbortError') throw error
+    throw toUploadError(error, 'Failed to cancel upload')
   }
 }
 
@@ -87,8 +108,9 @@ export async function uploadResumableVideo({
 }) {
   let session
   try {
-    session = await initializeUpload(file, clipCount)
+    session = await initializeUpload(file, clipCount, signal)
   } catch (error) {
+    if (error.name === 'AbortError') throw error
     onStateChange?.({
       status: 'failed',
       error: error.message || 'Failed to initialize upload',
@@ -123,6 +145,7 @@ export async function uploadResumableVideo({
           signal,
         })
       } catch (chunkError) {
+        if (chunkError.name === 'AbortError') throw chunkError
         onStateChange?.({
           uploadId,
           status: 'failed',
@@ -155,8 +178,9 @@ export async function uploadResumableVideo({
 
     let result
     try {
-      result = await completeUpload(uploadId, clipCount)
+      result = await completeUpload(uploadId, clipCount, signal)
     } catch (completeError) {
+      if (completeError.name === 'AbortError') throw completeError
       onStateChange?.({
         uploadId,
         status: 'failed',
@@ -198,10 +222,12 @@ export async function uploadYouTubeUrl({ url, clipCount }) {
 
     return response.data.data
   } catch (error) {
+    if (error.name === 'AbortError') throw error
     const message = parseErrorMessage(error)
     const enhancedError = new Error(message)
     enhancedError.userMessage = message
-    enhancedError.details = error.response?.data
+    enhancedError.code = error.response?.data?.code || null
+    enhancedError.details = error.response?.data?.details || null
     throw enhancedError
   }
 }

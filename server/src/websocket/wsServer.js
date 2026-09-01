@@ -20,16 +20,30 @@ export function initWebSocketServer(httpServer) {
 
   io.use((socket, next) => {
     try {
-      const cookieHeader = socket.handshake.headers.cookie;
+      // Token may arrive as handshake auth (preferred — the access token
+      // lives in JS memory, not a cookie) or, for legacy clients, in the
+      // access_token cookie.
+      const handshakeToken =
+        (typeof socket.handshake.auth?.token === "string" &&
+          socket.handshake.auth.token.replace(/^Bearer\s+/i, "")) ||
+        null;
 
+      const cookieHeader = socket.handshake.headers.cookie;
+      let cookieToken = null;
       if (cookieHeader) {
         const cookies = cookie.parse(cookieHeader);
-        const token = cookies.access_token;
+        cookieToken = cookies.access_token || null;
+      }
 
-        if (token) {
+      const token = handshakeToken || cookieToken;
+
+      if (token) {
+        try {
           const decoded = jwt.verify(token, env.JWT_SECRET);
           socket.userId = decoded.userId;
           return next();
+        } catch {
+          logger.warn("WebSocket: rejected invalid handshake token");
         }
       }
 
@@ -98,8 +112,8 @@ export function emitProcessingComplete(userId, jobId, result) {
 /**
  * Emit processing error
  */
-export function emitProcessingError(userId, jobId, error) {
-  emitToUser(userId, "processing:error", { jobId, error });
+export function emitProcessingError(userId, jobId, error, code = null) {
+  emitToUser(userId, "processing:error", { jobId, error, code });
 }
 
 /**

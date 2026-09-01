@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { extractYouTubeVideoId } from "../services/youtubeMetadataService.js";
 
 export const youtubeUrlSchema = z.object({
   url: z
-    .string()
+    .string({ required_error: "YouTube URL is required" })
     .url("Please provide a valid URL")
     .refine(
       (url) => {
@@ -21,6 +22,13 @@ export const youtubeUrlSchema = z.object({
         }
       },
       { message: "Please provide a valid YouTube video URL" },
+    )
+    .refine(
+      (url) => extractYouTubeVideoId(url) !== null,
+      {
+        message:
+          "Could not find a video ID in this URL. Supported formats: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID, youtube.com/embed/ID",
+      },
     ),
 
   clipCount: z.coerce.number().int().min(5).max(20).default(10),
